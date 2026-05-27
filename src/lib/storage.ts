@@ -91,7 +91,18 @@ function write<T>(key: string, value: T) {
   } catch {
     // ignore — quota exceeded etc.
   }
-  bump(key);
+  // Store the value we just wrote directly into the snapshot cache so the
+  // next getSnapshot call returns it without a redundant localStorage read
+  // + JSON.parse cycle. bump() would delete the snapshot and force a
+  // re-read — we avoid that by inlining the version increment here.
+  const v = (versions[key] = (versions[key] ?? 0) + 1);
+  snapshots.set(key, { v, value });
+  // Settings has a separate merged-with-defaults cache entry that must
+  // also be invalidated so getSettings() recomputes it.
+  if (key === KEYS.settings) {
+    snapshots.delete(SETTINGS_CACHE_KEY);
+  }
+  for (const l of listeners) l();
 }
 
 export const DEFAULT_SETTINGS: Settings = {

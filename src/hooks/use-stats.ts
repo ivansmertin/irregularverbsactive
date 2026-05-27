@@ -34,19 +34,22 @@ export function useStats(): AppStats {
     let totalAnswers = 0;
     let totalCorrect = 0;
     let masterySum = 0;
-    for (const v of VERBS) {
-      const p = progress[v.id];
-      if (p) {
-        touched += 1;
-        totalAnswers += p.correctCount + p.wrongCount;
-        totalCorrect += p.correctCount;
-        const m = p.masteryLevel ?? 0;
-        masterySum += m;
-        if (m >= 5) mastered += 1;
-        if (m >= 2) learned += 1;
-        if (p.isWeak) weak += 1;
-      }
+
+    // Iterate only over verbs the user has interacted with rather than the
+    // entire VERBS array. On a fresh start (10 out of 120+ verbs) this cuts
+    // the number of iterations significantly.
+    const entries = Object.values(progress);
+    for (const p of entries) {
+      touched += 1;
+      totalAnswers += p.correctCount + p.wrongCount;
+      totalCorrect += p.correctCount;
+      const m = p.masteryLevel ?? 0;
+      masterySum += m;
+      if (m >= 5) mastered += 1;
+      if (m >= 2) learned += 1;
+      if (p.isWeak) weak += 1;
     }
+
     const accuracy =
       totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0;
     const shadowingDone = Object.values(shadowing).reduce(

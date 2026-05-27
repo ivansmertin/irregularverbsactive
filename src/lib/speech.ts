@@ -25,6 +25,12 @@ function abortError(): DOMException {
   return new DOMException("Aborted", "AbortError");
 }
 
+// Module-level set that holds strong references to active utterances.
+// Chrome/Safari may garbage-collect SpeechSynthesisUtterance objects
+// during playback if no JS reference exists, silently stopping speech
+// and leaving the promise hanging. Entries are removed in onend/onerror.
+const activeUtterances = new Set<SpeechSynthesisUtterance>();
+
 export class BrowserSpeechProvider implements SpeechProvider {
   name = "browser-speech-synthesis";
   kind = "browser" as const;
@@ -83,6 +89,7 @@ export class BrowserSpeechProvider implements SpeechProvider {
         if (settled) return;
         settled = true;
         signal?.removeEventListener("abort", onAbort);
+        activeUtterances.delete(utterance);
         this.current = null;
         handler();
       };
@@ -112,6 +119,7 @@ export class BrowserSpeechProvider implements SpeechProvider {
         finish(() => reject(new Error("Не удалось воспроизвести речь.")));
       };
 
+      activeUtterances.add(utterance);
       window.speechSynthesis.speak(utterance);
     });
   }
@@ -124,6 +132,7 @@ export class BrowserSpeechProvider implements SpeechProvider {
         /* noop */
       }
     }
+    activeUtterances.clear();
     this.current = null;
   }
 }
