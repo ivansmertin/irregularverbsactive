@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/ui/Logo";
 import {
   Sheet,
   SheetContent,
@@ -54,11 +55,9 @@ export function AppLayout() {
       <header className="sticky top-0 z-30 hidden border-b border-border bg-background/90 backdrop-blur md:block">
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="flex h-11 w-11 items-center justify-center rounded-md bg-primary text-primary-foreground font-extrabold text-lg shadow-sm transition-transform duration-200 group-hover:scale-105">
-              A
-            </div>
+            <Logo className="h-11 w-11 shrink-0 text-primary transition-transform duration-200 group-hover:scale-105" />
             <div className="leading-tight">
-              <div className="text-base font-extrabold">актив</div>
+              <div className="text-base font-extrabold">онлайн-школа Актив</div>
               <div className="text-[11px] font-medium text-muted-foreground">Irregular Verbs</div>
             </div>
           </Link>
@@ -86,10 +85,8 @@ export function AppLayout() {
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur md:hidden">
         <div className="flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground font-extrabold shadow-sm">
-              A
-            </div>
-            <span className="text-base font-extrabold">актив</span>
+            <Logo className="h-9 w-9 shrink-0 text-primary" />
+            <span className="text-base font-extrabold">онлайн-школа Актив</span>
           </Link>
         </div>
       </header>

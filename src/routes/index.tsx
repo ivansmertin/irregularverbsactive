@@ -82,9 +82,7 @@ function HomePage() {
           icon={<CalendarClock className="h-5 w-5" />}
           title="На сегодня"
           description={
-            due > 0
-              ? `${due} ${pluralVerb(due)} пора повторить.`
-              : "Запланированных повторений нет."
+            due > 0 ? `${due} ${pluralVerb(due)} пора повторить` : "Запланированных повторений нет"
           }
           action={
             <Button asChild variant={due > 0 ? "default" : "secondary"} className="w-full">
@@ -98,9 +96,7 @@ function HomePage() {
           icon={<AlertTriangle className="h-5 w-5" />}
           title="Сложные"
           description={
-            hard > 0
-              ? `${hard} ${pluralVerb(hard)} требуют внимания.`
-              : "Сложных глаголов пока нет."
+            hard > 0 ? `${hard} ${pluralVerb(hard)} требуют внимания` : "Сложных глаголов пока нет"
           }
           action={
             <Button asChild variant="secondary" className="w-full">
@@ -113,7 +109,7 @@ function HomePage() {
         <ActionCard
           icon={<Mic className="h-5 w-5" />}
           title="Shadowing"
-          description="Формы и фразы с браузерным голосом."
+          description="Формы и фразы с браузерным голосом"
           action={
             <Button asChild variant="secondary" className="w-full">
               <Link to="/shadowing">Практиковать</Link>
@@ -144,7 +140,7 @@ function HomePage() {
               />
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">Завершённых тренировок пока нет.</p>
+            <p className="text-sm text-muted-foreground">Завершённых тренировок пока нет</p>
           )}
         </CardContent>
       </Card>
@@ -157,7 +153,7 @@ function PrimaryAction({ due, hard, touched }: { due: number; hard: number; touc
     return (
       <Button asChild size="lg" className="w-full md:w-auto">
         <Link to="/practice" search={{ scope: "due" }}>
-          Повторить на сегодня <ArrowRight className="h-4 w-4" />
+          Начать тренировку <ArrowRight className="h-4 w-4" />
         </Link>
       </Button>
     );
@@ -166,7 +162,7 @@ function PrimaryAction({ due, hard, touched }: { due: number; hard: number; touc
     return (
       <Button asChild size="lg" className="w-full md:w-auto">
         <Link to="/practice" search={{ scope: "weak" }}>
-          Разобрать сложные <ArrowRight className="h-4 w-4" />
+          Начать тренировку <ArrowRight className="h-4 w-4" />
         </Link>
       </Button>
     );
@@ -174,8 +170,7 @@ function PrimaryAction({ due, hard, touched }: { due: number; hard: number; touc
   return (
     <Button asChild size="lg" className="w-full md:w-auto">
       <Link to="/practice" search={{ scope: touched > 0 ? "all" : "new" }}>
-        {touched > 0 ? "Продолжить тренировку" : "Начать тренировку"}
-        <Dumbbell className="h-4 w-4" />
+        Начать тренировку <ArrowRight className="h-4 w-4" />
       </Link>
     </Button>
   );

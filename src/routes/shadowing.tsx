@@ -4,6 +4,7 @@ import { AlertCircle, AlertTriangle, Check, Play, RotateCw, Square, Volume2 } fr
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
@@ -82,6 +83,7 @@ function ShadowingPage() {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechAvailable, setSpeechAvailable] = useState(false);
+  const [lockWord, setLockWord] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
 
   const queue = useMemo(() => {
@@ -102,6 +104,15 @@ function ShadowingPage() {
     return VERBS;
   }, [mode, search.verbId, search.groupId]);
 
+  const verb: Verb | undefined = queue[verbIndex] || queue[0];
+  const lastVerbIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (verb) {
+      lastVerbIdRef.current = verb.id;
+    }
+  }, [verb]);
+
   useEffect(() => {
     setSpeechAvailable(isSpeechAvailable());
     return () => {
@@ -111,13 +122,21 @@ function ShadowingPage() {
   }, []);
 
   useEffect(() => {
-    setVerbIndex(0);
+    const targetId = lastVerbIdRef.current;
+    if (lockWord && targetId) {
+      const idx = queue.findIndex((v) => v.id === targetId);
+      if (idx !== -1) {
+        setVerbIndex(idx);
+      } else {
+        setVerbIndex(0);
+      }
+    } else {
+      setVerbIndex(0);
+    }
     setPhraseIndex(0);
     stopSpeaking();
     setIsSpeaking(false);
-  }, [mode, search.verbId, search.groupId]);
-
-  const verb: Verb | undefined = queue[verbIndex];
+  }, [mode, search.verbId, search.groupId, queue, lockWord]);
 
   function currentRequest(): SpeechRequest | null {
     if (!verb) return null;
@@ -324,6 +343,16 @@ function ShadowingPage() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex items-center gap-2 pt-2 md:col-span-3">
+            <Checkbox
+              id="shadowing-lock-word"
+              checked={lockWord}
+              onCheckedChange={(checked) => setLockWord(!!checked)}
+            />
+            <Label htmlFor="shadowing-lock-word" className="text-xs cursor-pointer select-none">
+              Сохранять текущий глагол при смене режима
+            </Label>
           </div>
         </CardContent>
       </Card>
