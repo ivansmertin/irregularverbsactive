@@ -541,22 +541,45 @@ export async function speak(req: SpeechRequest, opts?: SpeakOptions): Promise<Sp
 
 /**
  * Quietly prefetch (synthesize + cache) audio for the next item. Silent on
- * errors. At most one prefetch may run at a time across the whole app — if a
- * prefetch is already in flight, additional calls are dropped until it
- * completes. Already-cached requests are skipped.
+ * errors. At most one prefetch runs at a time across the whole app —
+ * but unlike the old "first wins, rest dropped" semantics, a new request
+ * **cancels** the in-flight prefetch and replaces it. That matches the
+ * use case (prefetch the NEXT shadowing item): if the user advances
+ * twice quickly, the prefetch that survives is for the item they're
+ * actually about to play, not the one they already moved past.
+ *
+ * Same-request calls coalesce into one prefetch (handled by ensureAsset's
+ * own `inflight` map).
  */
-let _prefetchInFlight: Promise<unknown> | null = null;
+let _prefetchAbort: AbortController | null = null;
+let _prefetchKey: string | null = null;
+
 export function prefetchSpeech(req: SpeechRequest): void {
   const server = getServerProvider();
+  const voiceId = req.voiceId ?? defaultVoiceId(req.accent);
+  const key = cacheKey({ ...req, voiceId });
+
+  // Already in cache → nothing to do.
   if (server.hasCached(req)) return;
-  if (_prefetchInFlight) return;
+  // Same prefetch already in flight → let it finish.
+  if (_prefetchKey === key && _prefetchAbort && !_prefetchAbort.signal.aborted) {
+    return;
+  }
+
+  // Different prefetch in flight → cancel it; it's for stale data now.
+  if (_prefetchAbort && !_prefetchAbort.signal.aborted) {
+    _prefetchAbort.abort(new DOMException("Superseded", "AbortError"));
+  }
 
   const controller = new AbortController();
+  _prefetchAbort = controller;
+  _prefetchKey = key;
+
   const timeoutId = setTimeout(() => {
     controller.abort(new DOMException("TimeoutError", "AbortError"));
   }, 4000);
 
-  const p = server
+  void server
     .ensureAsset(req, controller.signal)
     .catch((err) => {
       if (import.meta.env?.DEV) {
@@ -565,9 +588,11 @@ export function prefetchSpeech(req: SpeechRequest): void {
     })
     .finally(() => {
       clearTimeout(timeoutId);
-      if (_prefetchInFlight === p) _prefetchInFlight = null;
+      if (_prefetchAbort === controller) {
+        _prefetchAbort = null;
+        _prefetchKey = null;
+      }
     });
-  _prefetchInFlight = p;
 }
 
 export function hasCachedSpeech(req: SpeechRequest): boolean {
