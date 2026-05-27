@@ -53,9 +53,7 @@ function PracticePage() {
         count: search.count,
         mode: search.mode,
       }}
-      forceSingleVerbId={
-        search.scope === "single" && search.verbId ? search.verbId : undefined
-      }
+      forceSingleVerbId={search.scope === "single" && search.verbId ? search.verbId : undefined}
       onStart={(values) => setRun(values)}
     />
   );

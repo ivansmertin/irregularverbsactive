@@ -50,15 +50,9 @@ export function useStats(): AppStats {
       if (p.isWeak) weak += 1;
     }
 
-    const accuracy =
-      totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0;
-    const shadowingDone = Object.values(shadowing).reduce(
-      (s, x) => s + x.shadowingCount,
-      0,
-    );
-    const shadowingWeak = Object.values(shadowing).filter(
-      (x) => x.isWeakForShadowing,
-    ).length;
+    const accuracy = totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0;
+    const shadowingDone = Object.values(shadowing).reduce((s, x) => s + x.shadowingCount, 0);
+    const shadowingWeak = Object.values(shadowing).filter((x) => x.isWeakForShadowing).length;
     return {
       total,
       touched,
@@ -75,18 +69,12 @@ export function useStats(): AppStats {
 
 export function useDueCount(): number {
   const progress = useProgress();
-  return useMemo(
-    () => VERBS.filter((v) => isDueToday(progress[v.id])).length,
-    [progress],
-  );
+  return useMemo(() => VERBS.filter((v) => isDueToday(progress[v.id])).length, [progress]);
 }
 
 export function useWeakIds(): string[] {
   const progress = useProgress();
-  return useMemo(
-    () => VERBS.filter((v) => progress[v.id]?.isWeak).map((v) => v.id),
-    [progress],
-  );
+  return useMemo(() => VERBS.filter((v) => progress[v.id]?.isWeak).map((v) => v.id), [progress]);
 }
 
 export function useGroupProgress(groupId: string): {

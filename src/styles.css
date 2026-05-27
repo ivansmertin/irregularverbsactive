@@ -227,3 +227,17 @@
     transform: translateX(320%);
   }
 }
+
+@keyframes sound-wave {
+  0%,
+  100% {
+    transform: scaleY(0.2);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-wave {
+  animation: sound-wave 1s ease-in-out infinite;
+}

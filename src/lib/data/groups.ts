@@ -32,8 +32,7 @@ export const VERB_GROUPS: VerbGroup[] = [
     id: "aba",
     title: "A–B–A",
     subtitle: "Первая и третья формы одинаковые",
-    description:
-      "Past Participle совпадает с инфинитивом. Маленькая, но коварная группа.",
+    description: "Past Participle совпадает с инфинитивом. Маленькая, но коварная группа.",
     patternType: "form",
     examples: ["come", "become", "run"],
   },
@@ -50,8 +49,7 @@ export const VERB_GROUPS: VerbGroup[] = [
     id: "ee-e-e",
     title: "ee → e → e",
     subtitle: "Долгое ee становится коротким e",
-    description:
-      "Глаголы с долгим [iː], которое в прошедших формах сокращается до короткого [e].",
+    description: "Глаголы с долгим [iː], которое в прошедших формах сокращается до короткого [e].",
     patternType: "sound",
     examples: ["keep", "sleep", "feel", "meet", "feed"],
   },
@@ -59,8 +57,7 @@ export const VERB_GROUPS: VerbGroup[] = [
     id: "ought-aught",
     title: "-ought / -aught",
     subtitle: "Прошедшие формы на -ought / -aught",
-    description:
-      "Глаголы, у которых обе прошедшие формы заканчиваются на -ought или -aught.",
+    description: "Глаголы, у которых обе прошедшие формы заканчиваются на -ought или -aught.",
     patternType: "form",
     examples: ["buy", "bring", "think", "fight", "teach", "catch"],
   },

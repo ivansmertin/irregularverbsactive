@@ -20,12 +20,7 @@ import {
   getShadowing,
   storageSubscribe,
 } from "@/lib/storage";
-import type {
-  PracticeSession,
-  Settings,
-  ShadowingProgress,
-  UserVerbProgress,
-} from "@/lib/types";
+import type { PracticeSession, Settings, ShadowingProgress, UserVerbProgress } from "@/lib/types";
 
 export function useProgress(): Record<string, UserVerbProgress> {
   return useSyncExternalStore(storageSubscribe, getProgress, emptySnapshot.progress);

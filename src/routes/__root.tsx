@@ -71,13 +71,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Irregular Verbs Trainer — тренажёр неправильных глаголов" },
+      { title: "Active English Speaking: тренируем неправильные глаголы" },
       {
         name: "description",
         content:
-          "Учите английские неправильные глаголы по группам и звуковым паттернам. Тренировки, Shadowing и интервальное повторение.",
+          "Эффективный способ изучения неправильных глаголов: группировка по звуковым паттернам. Упражнения, практика речи, регулярное повторение.",
       },
-      { property: "og:title", content: "Irregular Verbs Trainer — тренажёр неправильных глаголов" },
+      { property: "og:title", content: "Active English Speaking: тренируем неправильные глаголы" },
       {
         property: "og:description",
         content: "Тренажёр неправильных глаголов английского языка: группы, упражнения, Shadowing.",
@@ -86,7 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       {
         name: "twitter:title",
-        content: "Irregular Verbs Trainer — тренажёр неправильных глаголов",
+        content: "Active English Speaking: тренируем неправильные глаголы",
       },
       { name: "twitter:description", content: "Тренажёр неправильных глаголов английского языка." },
       // og:image temporarily omitted — the prior URL (Lovable preview R2)

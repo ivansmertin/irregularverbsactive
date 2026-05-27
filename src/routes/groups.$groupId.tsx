@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Grid2X2, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,12 @@ function GroupDetail() {
   const settings = useSettings();
   const showTranslation = settings.showTranslation;
   const [view, setView] = useState<"list" | "cards">("list");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setView("cards");
+    }
+  }, []);
 
   return (
     <div className="space-y-6">

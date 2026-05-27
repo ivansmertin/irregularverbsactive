@@ -1,10 +1,5 @@
 import { VERBS } from "./data/verbs";
-import {
-  getProgress,
-  getShadowing,
-  saveProgress,
-  saveShadowing,
-} from "./storage";
+import { getProgress, getShadowing, saveProgress, saveShadowing } from "./storage";
 import type { ShadowingProgress, UserVerbProgress } from "./types";
 
 // SRS interval ladder (days). masteryLevel indexes into this array: a correct
@@ -192,13 +187,8 @@ export function getGroupProgress(groupId: string) {
   const all = getProgress();
   const groupVerbs = VERBS.filter((v) => v.groupId === groupId);
   if (groupVerbs.length === 0) return { percent: 0, count: 0, mastered: 0 };
-  const sumMastery = groupVerbs.reduce(
-    (s, v) => s + (all[v.id]?.masteryLevel ?? 0),
-    0,
-  );
+  const sumMastery = groupVerbs.reduce((s, v) => s + (all[v.id]?.masteryLevel ?? 0), 0);
   const percent = Math.round((sumMastery / (groupVerbs.length * 5)) * 100);
-  const mastered = groupVerbs.filter(
-    (v) => (all[v.id]?.masteryLevel ?? 0) >= 5,
-  ).length;
+  const mastered = groupVerbs.filter((v) => (all[v.id]?.masteryLevel ?? 0) >= 5).length;
   return { percent, count: groupVerbs.length, mastered };
 }

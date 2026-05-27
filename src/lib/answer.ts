@@ -5,8 +5,15 @@ export function normalize(s: string): string {
 }
 
 export function splitForms(input: string): string[] {
+  const hasStandardDelimiter = /[—–\-,/|]/.test(input);
+  if (hasStandardDelimiter) {
+    return input
+      .split(/[—–\-,/|]+/)
+      .map((s) => normalize(s))
+      .filter(Boolean);
+  }
   return input
-    .split(/[—–\-,/|]+/)
+    .split(/\s+/)
     .map((s) => normalize(s))
     .filter(Boolean);
 }
@@ -32,8 +39,6 @@ export function checkInfinitiveTriple(verb: Verb, input: string): boolean {
   if (parts.length < 3) return false;
   const [inf, ps, pp] = parts;
   return (
-    inf === normalize(verb.infinitive) &&
-    checkPastSimple(verb, ps) &&
-    checkPastParticiple(verb, pp)
+    inf === normalize(verb.infinitive) && checkPastSimple(verb, ps) && checkPastParticiple(verb, pp)
   );
 }

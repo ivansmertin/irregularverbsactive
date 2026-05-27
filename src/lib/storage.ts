@@ -122,12 +122,10 @@ export const DEFAULT_SETTINGS: Settings = {
 // handlers that need a one-shot read). They return the cached snapshot so
 // every reader inside one render sees the same object reference.
 
-export const getProgress = () =>
-  readCached<Record<string, UserVerbProgress>>(KEYS.progress, {});
+export const getProgress = () => readCached<Record<string, UserVerbProgress>>(KEYS.progress, {});
 export const saveProgress = (p: Record<string, UserVerbProgress>) => write(KEYS.progress, p);
 
-export const getShadowing = () =>
-  readCached<Record<string, ShadowingProgress>>(KEYS.shadowing, {});
+export const getShadowing = () => readCached<Record<string, ShadowingProgress>>(KEYS.shadowing, {});
 export const saveShadowing = (p: Record<string, ShadowingProgress>) => write(KEYS.shadowing, p);
 
 const SETTINGS_CACHE_KEY = "__settings_merged__";

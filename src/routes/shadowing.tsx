@@ -342,6 +342,44 @@ function ShadowingPage() {
             {verb && <div className="mt-2 text-sm text-muted-foreground">{verb.translation}</div>}
           </div>
 
+          <div className="flex justify-center items-center gap-1.5 h-8 my-1">
+            <div
+              className={cn(
+                "w-1 h-6 rounded-full bg-primary transition-all duration-300 origin-center",
+                isSpeaking ? "animate-wave" : "scale-y-[0.25] opacity-40",
+              )}
+              style={{ animationDelay: "0.1s" }}
+            />
+            <div
+              className={cn(
+                "w-1 h-6 rounded-full bg-primary transition-all duration-300 origin-center",
+                isSpeaking ? "animate-wave" : "scale-y-[0.4] opacity-40",
+              )}
+              style={{ animationDelay: "0.3s" }}
+            />
+            <div
+              className={cn(
+                "w-1 h-6 rounded-full bg-primary transition-all duration-300 origin-center",
+                isSpeaking ? "animate-wave" : "scale-y-[0.15] opacity-40",
+              )}
+              style={{ animationDelay: "0.5s" }}
+            />
+            <div
+              className={cn(
+                "w-1 h-6 rounded-full bg-primary transition-all duration-300 origin-center",
+                isSpeaking ? "animate-wave" : "scale-y-[0.5] opacity-40",
+              )}
+              style={{ animationDelay: "0.2s" }}
+            />
+            <div
+              className={cn(
+                "w-1 h-6 rounded-full bg-primary transition-all duration-300 origin-center",
+                isSpeaking ? "animate-wave" : "scale-y-[0.3] opacity-40",
+              )}
+              style={{ animationDelay: "0.4s" }}
+            />
+          </div>
+
           <div
             className={cn(
               "flex items-center justify-center gap-2 text-xs",
