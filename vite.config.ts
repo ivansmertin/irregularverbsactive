@@ -12,14 +12,5 @@ export default defineConfig({
   cloudflare: false,
   tanstackStart: {
     server: { entry: "server" },
-    prerender: {
-      enabled: true,
-    },
-    router: {
-      basepath: "/irregularverbsactive",
-    },
-  },
-  vite: {
-    base: "/irregularverbsactive/",
   },
 });
