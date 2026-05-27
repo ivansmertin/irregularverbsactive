@@ -144,6 +144,61 @@ function getBrowserProvider(): BrowserSpeechProvider {
   return browserProvider;
 }
 
+export function preprocessSpeechText(text: string, type: SpeechRequest["type"]): string {
+  let processed = text;
+
+  if (type === "verb_forms") {
+    // 1. "read" forms: read — read — read -> read — red — red
+    processed = processed.replace(
+      /\bread\s*([—–\-,/|]+)\s*read\s*([—–\-,/|]+)\s*read\b/gi,
+      (match, p1, p2) => {
+        const isUpper = match.startsWith("READ");
+        return isUpper ? `READ ${p1} RED ${p2} RED` : `read ${p1} red ${p2} red`;
+      },
+    );
+
+    // 2. "wind" forms: wind — wound — wound -> wined — wound — wound
+    processed = processed.replace(
+      /\bwind\s*([—–\-,/|]+)\s*wound\s*([—–\-,/|]+)\s*wound\b/gi,
+      (match, p1, p2) => {
+        const isUpper = match.startsWith("WIND");
+        return isUpper ? `WINED ${p1} WOUND ${p2} WOUND` : `wined ${p1} wound ${p2} wound`;
+      },
+    );
+
+    // 3. "tear" forms: tear — tore — torn -> tare — tore — torn
+    processed = processed.replace(
+      /\btear\s*([—–\-,/|]+)\s*tore\s*([—–\-,/|]+)\s*torn\b/gi,
+      (match, p1, p2) => {
+        const isUpper = match.startsWith("TEAR");
+        return isUpper ? `TARE ${p1} TORE ${p2} TORN` : `tare ${p1} tore ${p2} torn`;
+      },
+    );
+
+    // 4. "sow" forms: sow — sowed — sown -> sew — sowed — sown
+    processed = processed.replace(
+      /\bsow\s*([—–\-,/|]+)\s*sowed\s*([—–\-,/|]+)\s*sown\b/gi,
+      (match, p1, p2) => {
+        const isUpper = match.startsWith("SOW");
+        return isUpper ? `SEW ${p1} SOWED ${p2} SOWN` : `sew ${p1} sowed ${p2} sown`;
+      },
+    );
+  } else if (type === "group_sequence") {
+    const lines = processed.split("\n");
+    const processedLines = lines.map((line) => preprocessSpeechText(line, "verb_forms"));
+    processed = processedLines.join("\n");
+  } else if (type === "sentence") {
+    // For sentences containing "read" in past context (all occurrences in DB), replace with "red" for TTS
+    processed = processed.replace(/\bread\b/gi, (match) => {
+      if (match === "Read") return "Red";
+      if (match === "READ") return "RED";
+      return "red";
+    });
+  }
+
+  return processed;
+}
+
 export async function speak(req: SpeechRequest, opts?: SpeakOptions): Promise<SpeechResult> {
   const provider = getBrowserProvider();
   stopSpeaking();
@@ -155,7 +210,9 @@ export async function speak(req: SpeechRequest, opts?: SpeakOptions): Promise<Sp
 
   opts?.onState?.("playing");
   try {
-    const result = await provider.speak(req, opts?.signal);
+    const processedText = preprocessSpeechText(req.text, req.type);
+    const processedReq = { ...req, text: processedText };
+    const result = await provider.speak(processedReq, opts?.signal);
     opts?.onState?.("idle");
     return result;
   } catch (error) {
