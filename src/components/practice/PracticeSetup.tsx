@@ -76,9 +76,9 @@ export function PracticeSetup({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Тренировка</h1>
+        <h1 className="text-2xl font-semibold md:text-3xl">Тренировка</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Выберите, что и как тренировать. Ответы проверяются автоматически, а прогресс сохраняется.
+          Выберите набор и тип задания. Прогресс сохранится автоматически.
         </p>
       </header>
 
@@ -89,7 +89,9 @@ export function PracticeSetup({
         <CardContent className="space-y-4">
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Набор</Label>
+              <Label htmlFor="practice-scope" className="text-xs text-muted-foreground">
+                Набор
+              </Label>
               <Badge variant={poolSize === 0 ? "destructive" : "secondary"} className="text-[10px]">
                 {poolSize === 0
                   ? "пусто"
@@ -101,7 +103,7 @@ export function PracticeSetup({
               </Badge>
             </div>
             <Select value={scope} onValueChange={(v) => setScope(v as PracticeScope)}>
-              <SelectTrigger>
+              <SelectTrigger id="practice-scope">
                 <SelectValue placeholder="Выберите набор" />
               </SelectTrigger>
               <SelectContent>
@@ -115,7 +117,7 @@ export function PracticeSetup({
             {startDisabled && (
               <p className="mt-1.5 text-xs text-muted-foreground">
                 {scope === "weak"
-                  ? "Пока нет слабых глаголов — отметьте сложные в тренировке."
+                  ? "Пока нет сложных глаголов — отметьте трудные в тренировке."
                   : scope === "due"
                     ? "Сегодня нет глаголов к повторению. Возьмите «Все»."
                     : scope === "new"
@@ -127,11 +129,11 @@ export function PracticeSetup({
 
           {scope === "group" && (
             <div>
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+              <Label htmlFor="practice-group" className="text-xs text-muted-foreground">
                 Группа
               </Label>
               <Select value={groupId} onValueChange={setGroupId}>
-                <SelectTrigger className="mt-1.5">
+                <SelectTrigger id="practice-group" className="mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,10 +148,14 @@ export function PracticeSetup({
           )}
 
           <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+            <div id="practice-count-label" className="text-xs text-muted-foreground">
               Количество вопросов
-            </Label>
-            <div className="mt-1.5 grid grid-cols-4 gap-2">
+            </div>
+            <div
+              className="mt-1.5 grid grid-cols-4 gap-2"
+              role="group"
+              aria-labelledby="practice-count-label"
+            >
               {QUESTION_COUNT_OPTIONS.map((n) => (
                 <Button
                   key={n}
@@ -164,10 +170,10 @@ export function PracticeSetup({
           </div>
 
           <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+            <div id="practice-mode-label" className="text-xs text-muted-foreground">
               Тип упражнения
-            </Label>
-            <div className="mt-1.5 grid gap-2">
+            </div>
+            <div className="mt-1.5 grid gap-2" role="group" aria-labelledby="practice-mode-label">
               {PRACTICE_MODES.map((m) => (
                 <button
                   key={m}

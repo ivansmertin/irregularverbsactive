@@ -40,9 +40,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Не удалось загрузить страницу
-        </h1>
+        <h1 className="text-xl font-semibold text-foreground">Не удалось загрузить страницу</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Что-то пошло не так. Попробуйте обновить или вернуться на главную.
         </p>
@@ -96,15 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // /public/og.png and re-add { property: "og:image", content: "/og.png" }
       // when ready.
     ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap",
-      },
-    ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootShell,
   component: RootComponent,

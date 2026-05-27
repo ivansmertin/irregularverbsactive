@@ -1,147 +1,192 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import type { ReactNode } from "react";
+import { ArrowRight, BarChart3, CalendarClock, Dumbbell, Mic, AlertTriangle } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
-import {
-  ArrowRight,
-  CalendarClock,
-  Mic,
-  AlertTriangle,
-  Layers,
-  Dumbbell,
-} from "lucide-react";
-import { useDueCount, useStats, useWeakIds } from "@/hooks/use-stats";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useProgress, useSessions, useShadowing } from "@/hooks/use-storage";
+import type { UserVerbProgress } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+function isDueToday(progress: UserVerbProgress): boolean {
+  if (!progress.nextReviewAt) return false;
+  const next = new Date(progress.nextReviewAt).getTime();
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return Number.isFinite(next) && next <= endOfToday.getTime();
+}
+
+function pluralVerb(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "глагол";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "глагола";
+  return "глаголов";
+}
+
 function HomePage() {
-  const stats = useStats();
-  const due = useDueCount();
-  const weak = useWeakIds().length;
+  const progress = useProgress();
+  const shadowing = useShadowing();
+  const sessions = useSessions();
+
+  const progressList = Object.values(progress);
+  const touched = progressList.length;
+  const due = progressList.filter(isDueToday).length;
+  const hard = progressList.filter((item) => item.isWeak).length;
+  const totalAnswers = progressList.reduce(
+    (sum, item) => sum + item.correctCount + item.wrongCount,
+    0,
+  );
+  const correctAnswers = progressList.reduce((sum, item) => sum + item.correctCount, 0);
+  const accuracy = totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0;
+  const shadowingDone = Object.values(shadowing).reduce(
+    (sum, item) => sum + item.shadowingCount,
+    0,
+  );
+  const lastSession = sessions[0];
 
   return (
-    <div className="space-y-10">
-      {/* Hero */}
-      <section className="relative overflow-hidden rounded-xl border border-border bg-secondary p-6 md:p-12">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full bg-success/25 blur-3xl"
-        />
-        <div className="relative">
-          <Badge className="mb-4 rounded-md bg-primary/10 px-3 py-1 text-primary hover:bg-primary/10">
-            Тренажёр неправильных глаголов
-          </Badge>
-          <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl">
-            Учите неправильные глаголы по&nbsp;паттернам, а&nbsp;не&nbsp;по&nbsp;алфавиту
-          </h1>
-          <p className="mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
-            Разберите группу, закрепите формы в&nbsp;упражнениях и&nbsp;повторяйте за&nbsp;диктором
-            в&nbsp;режиме Shadowing. Прогресс сохраняется автоматически.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link to="/practice">
-                Начать тренировку <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/groups">Изучать по группам</Link>
-            </Button>
+    <div className="space-y-5">
+      <section className="rounded-md border bg-card p-5 md:p-6">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-2xl">
+            <Badge variant="secondary" className="mb-3">
+              Irregular Verbs Trainer
+            </Badge>
+            <h1 className="text-2xl font-semibold md:text-3xl">Что тренируем сегодня?</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Быстрый обзор прогресса и следующий шаг без лишней подготовки.
+            </p>
           </div>
-
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-border bg-background p-5">
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Общий прогресс</span>
-                <span className="font-bold text-primary">{stats.overallPercent}%</span>
-              </div>
-              <Progress value={stats.overallPercent} />
-            </div>
-            <Stat label="Изучено глаголов" value={`${stats.learned} / ${stats.total}`} />
-            <Stat label="Средняя точность" value={`${stats.accuracy}%`} />
-          </div>
+          <PrimaryAction due={due} hard={hard} touched={touched} />
         </div>
       </section>
 
-      {/* Action cards */}
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-3 md:grid-cols-3" aria-label="Сводка прогресса">
+        <Metric label="В работе" value={String(touched)} hint="глаголов уже встречались" />
+        <Metric
+          label="Точность"
+          value={totalAnswers > 0 ? `${accuracy}%` : "—"}
+          hint={totalAnswers > 0 ? `${totalAnswers} ответов` : "пока нет ответов"}
+        />
+        <Metric label="Shadowing" value={String(shadowingDone)} hint="повторений вслух" />
+      </section>
+
+      <section className="grid gap-3 md:grid-cols-3">
         <ActionCard
           icon={<CalendarClock className="h-5 w-5" />}
-          title="Сегодня к повторению"
+          title="На сегодня"
           description={
             due > 0
-              ? `${due} глаг. ждут повторения по плану интервального повторения.`
-              : "Сегодня нет глаголов к повторению. Можно изучать новые."
+              ? `${due} ${pluralVerb(due)} пора повторить.`
+              : "Запланированных повторений нет."
           }
           action={
-            <Button asChild variant="secondary" className="w-full">
-              <Link to="/practice" search={{ scope: "due" }}>
-                Повторить
+            <Button asChild variant={due > 0 ? "default" : "secondary"} className="w-full">
+              <Link to="/practice" search={{ scope: due > 0 ? "due" : "all" }}>
+                {due > 0 ? "Повторить" : "Тренировать всё"}
               </Link>
             </Button>
           }
         />
         <ActionCard
           icon={<AlertTriangle className="h-5 w-5" />}
-          title="Слабые глаголы"
+          title="Сложные"
           description={
-            weak > 0
-              ? `${weak} глаг. требуют дополнительной тренировки.`
-              : "Слабых глаголов пока нет — отличная работа."
+            hard > 0
+              ? `${hard} ${pluralVerb(hard)} требуют внимания.`
+              : "Сложных глаголов пока нет."
           }
           action={
             <Button asChild variant="secondary" className="w-full">
-              <Link to="/weak">Открыть</Link>
+              <Link to={hard > 0 ? "/weak" : "/practice"} search={hard > 0 ? {} : { scope: "all" }}>
+                {hard > 0 ? "Открыть" : "Начать"}
+              </Link>
             </Button>
           }
         />
         <ActionCard
           icon={<Mic className="h-5 w-5" />}
           title="Shadowing"
-          description="Слушайте и повторяйте за диктором — для произношения и автоматизма."
+          description="Формы и фразы с браузерным голосом."
           action={
             <Button asChild variant="secondary" className="w-full">
-              <Link to="/shadowing">К Shadowing</Link>
+              <Link to="/shadowing">Практиковать</Link>
             </Button>
           }
         />
       </section>
 
-
-      {/* Method */}
-      <section className="grid gap-4 md:grid-cols-3">
-        <MethodCard
-          icon={<Layers className="h-5 w-5" />}
-          title="Группы и паттерны"
-          text="Глаголы сгруппированы по форме и звуку: A–B–B, i–a–u, -ought / -aught и др."
-        />
-        <MethodCard
-          icon={<Dumbbell className="h-5 w-5" />}
-          title="Активное вспоминание"
-          text="5 типов упражнений: пропуски форм, выбор, перевод и быстрая самопроверка."
-        />
-        <MethodCard
-          icon={<Mic className="h-5 w-5" />}
-          title="Shadowing"
-          text="Повторение за диктором: формы, фразы и групповой ритм. British / American."
-        />
-      </section>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <BarChart3 className="h-4 w-4" /> Последняя тренировка
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {lastSession ? (
+            <>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-medium">{lastSession.mode}</span>
+                <span className="text-muted-foreground">
+                  {new Date(lastSession.startedAt).toLocaleDateString("ru-RU")}
+                </span>
+              </div>
+              <Progress
+                value={Math.round((lastSession.correct / Math.max(lastSession.total, 1)) * 100)}
+                aria-label="Результат последней тренировки"
+                aria-valuetext={`${lastSession.correct} из ${lastSession.total}`}
+              />
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Завершённых тренировок пока нет.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function PrimaryAction({ due, hard, touched }: { due: number; hard: number; touched: number }) {
+  if (due > 0) {
+    return (
+      <Button asChild size="lg" className="w-full md:w-auto">
+        <Link to="/practice" search={{ scope: "due" }}>
+          Повторить на сегодня <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Button>
+    );
+  }
+  if (hard > 0) {
+    return (
+      <Button asChild size="lg" className="w-full md:w-auto">
+        <Link to="/practice" search={{ scope: "weak" }}>
+          Разобрать сложные <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Button>
+    );
+  }
   return (
-    <div className="rounded-lg border border-border bg-background p-5 transition-transform duration-200 hover:-translate-y-0.5">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-1.5 text-2xl font-extrabold">{value}</div>
+    <Button asChild size="lg" className="w-full md:w-auto">
+      <Link to="/practice" search={{ scope: touched > 0 ? "all" : "new" }}>
+        {touched > 0 ? "Продолжить тренировку" : "Начать тренировку"}
+        <Dumbbell className="h-4 w-4" />
+      </Link>
+    </Button>
+  );
+}
+
+function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-md border bg-card p-4">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="mt-1 text-2xl font-semibold">{value}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
     </div>
   );
 }
@@ -152,45 +197,22 @@ function ActionCard({
   description,
   action,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
-  action: React.ReactNode;
+  action: ReactNode;
 }) {
   return (
     <Card className="flex flex-col">
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
           {icon}
         </div>
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col justify-between gap-4">
         <p className="text-sm text-muted-foreground">{description}</p>
         {action}
-      </CardContent>
-    </Card>
-  );
-}
-
-
-function MethodCard({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-          {icon}
-        </div>
-        <div className="font-semibold">{title}</div>
-        <p className="mt-1 text-sm text-muted-foreground">{text}</p>
       </CardContent>
     </Card>
   );

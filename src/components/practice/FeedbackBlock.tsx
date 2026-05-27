@@ -1,4 +1,5 @@
 import { Check, X, ArrowRight } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +12,17 @@ export function FeedbackBlock({
   text: string;
   onNext: () => void;
 }) {
+  const nextRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    nextRef.current?.focus();
+  }, []);
+
   return (
     <div className="space-y-3">
       <div
+        role="status"
+        aria-live="polite"
         className={cn(
           "flex items-start gap-2 rounded-md border p-3 text-sm",
           ok
@@ -28,7 +37,7 @@ export function FeedbackBlock({
         )}
         <span>{text}</span>
       </div>
-      <Button className="w-full" onClick={onNext}>
+      <Button ref={nextRef} className="w-full" onClick={onNext}>
         Следующий <ArrowRight className="ml-2 h-4 w-4" />
       </Button>
     </div>

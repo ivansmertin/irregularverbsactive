@@ -16,7 +16,7 @@ function GroupsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Группы глаголов</h1>
+        <h1 className="text-2xl font-semibold md:text-3xl">Группы глаголов</h1>
         <p className="mt-2 text-sm text-muted-foreground md:text-base">
           Каждая группа объединена общим паттерном — формой или звучанием. Начните с любой и
           постепенно закрепляйте её в&nbsp;упражнениях.
@@ -55,10 +55,7 @@ function GroupCard({ group: g }: { group: VerbGroup }) {
         <p className="text-sm text-muted-foreground">{g.description}</p>
         <div className="flex flex-wrap gap-1.5">
           {g.examples.slice(0, 5).map((ex) => (
-            <span
-              key={ex}
-              className="rounded-md border bg-muted/40 px-2 py-0.5 font-mono text-xs"
-            >
+            <span key={ex} className="rounded-md border bg-muted/40 px-2 py-0.5 font-mono text-xs">
               {ex}
             </span>
           ))}
@@ -68,7 +65,11 @@ function GroupCard({ group: g }: { group: VerbGroup }) {
             <span className="text-muted-foreground">Прогресс по группе</span>
             <span className="font-medium">{stats.percent}%</span>
           </div>
-          <Progress value={stats.percent} />
+          <Progress
+            value={stats.percent}
+            aria-label={`Прогресс группы ${g.title}`}
+            aria-valuetext={`${stats.percent}%`}
+          />
         </div>
         <div className="mt-auto flex gap-2">
           <Button asChild variant="outline" className="flex-1">

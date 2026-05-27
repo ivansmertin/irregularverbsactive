@@ -52,16 +52,12 @@ export function explainRuEn(verb: Verb, ok: boolean): string {
   return `Правильный ответ: ${tail} Запомните все три формы — они нужны для разных времён.`;
 }
 
-export function explainSelfCheck(
-  verb: Verb,
-  level: "known" | "almost" | "unknown",
-): string {
+export function explainSelfCheck(verb: Verb, level: "known" | "almost" | "unknown"): string {
   const tail = `${verb.infinitive} — ${verb.pastSimple} — ${verb.pastParticiple}.`;
   if (level === "known") return `Отлично: ${tail}`;
-  if (level === "almost")
-    return `Почти — повторим раньше обычного, чтобы закрепить: ${tail}`;
+  if (level === "almost") return `Почти — повторим раньше обычного, чтобы закрепить: ${tail}`;
   return `Правильный ответ: ${tail}`;
 }
 
 export const WEAK_VERB_NOTE =
-  "Глагол добавлен в слабые — по нему накопились ошибки. Появится в наборе «Слабые».";
+  "Глагол добавлен в сложные — по нему накопились ошибки. Появится в наборе «Сложные».";

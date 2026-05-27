@@ -5,7 +5,6 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { RefreshCw, RotateCcw, Settings2 } from "lucide-react";
 
-
 export type SessionMistake = {
   verbId: string;
   infinitive: string;
@@ -50,7 +49,11 @@ export function PracticeResult({
             {almost > 0 && <> · Частично: {almost}</>} · Ошибок: {wrong}
           </div>
           <div className="text-muted-foreground">Точность: {percent}%</div>
-          <Progress value={percent} />
+          <Progress
+            value={percent}
+            aria-label="Итоговая точность тренировки"
+            aria-valuetext={`${percent}%`}
+          />
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             <Button variant="outline" onClick={onExit}>
               <Settings2 className="mr-2 h-4 w-4" /> Настроить заново
@@ -94,10 +97,7 @@ export function PracticeResult({
                 </div>
                 <div className="mt-3 text-right">
                   <Button asChild size="sm" variant="outline">
-                    <Link
-                      to="/practice"
-                      search={{ scope: "single", verbId: m.verbId, count: 1 }}
-                    >
+                    <Link to="/practice" search={{ scope: "single", verbId: m.verbId, count: 1 }}>
                       Повторить этот глагол
                     </Link>
                   </Button>

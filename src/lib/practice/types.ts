@@ -21,33 +21,26 @@ export const CONCRETE_MODES: readonly ConcreteMode[] = [
   "self_check",
 ] as const;
 
-export const PRACTICE_SCOPES = [
-  "all",
-  "new",
-  "weak",
-  "due",
-  "group",
-  "single",
-] as const;
+export const PRACTICE_SCOPES = ["all", "new", "weak", "due", "group", "single"] as const;
 export type PracticeScope = (typeof PRACTICE_SCOPES)[number];
 
 export type Difficulty = "easy" | "standard" | "hard";
 
 export const MODE_LABEL: Record<PracticeMode, string> = {
-  auto: "Авто (по сложности)",
+  auto: "Подобрать автоматически",
   fill: "Заполнить пропущенные формы",
   choice_pp: "Выбор: Present Perfect (3-я форма)",
   choice_ps_pp: "Past Simple или Past Participle",
-  ru_en: "Перевод с русского",
+  ru_en: "Русский → английский",
   self_check: "Быстрая самопроверка",
 };
 
 export const SCOPE_LABEL: Record<PracticeScope, string> = {
   all: "Все глаголы",
   new: "Только новые",
-  weak: "Только слабые",
-  due: "Сегодня к повторению",
-  group: "Конкретная группа",
+  weak: "Только сложные",
+  due: "На сегодня",
+  group: "Группа",
   single: "Один глагол",
 };
 

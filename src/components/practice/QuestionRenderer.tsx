@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,7 @@ export function QuestionRenderer(props: QuestionRendererProps) {
   const [pp, setPp] = useState("");
   const [tripleInput, setTripleInput] = useState("");
   const [choice, setChoice] = useState<string>("");
+  const pastParticipleRef = useRef<HTMLInputElement | null>(null);
 
   function finish(opts: {
     result: AnswerResult;
@@ -91,13 +92,13 @@ export function QuestionRenderer(props: QuestionRendererProps) {
 
   const choicePPSentence = useMemo(
     () => maskForm(verb.examples.presentPerfect, verb.pastParticiple),
-    [verb.id, verb.examples.presentPerfect, verb.pastParticiple],
+    [verb.examples.presentPerfect, verb.pastParticiple],
   );
   const choicePSSentence = useMemo(
     () => maskForm(verb.examples.pastSimple, verb.pastSimple),
-    [verb.id, verb.examples.pastSimple, verb.pastSimple],
+    [verb.examples.pastSimple, verb.pastSimple],
   );
-  const choiceOptionsPP = useMemo(() => buildChoiceOptionsPP(verb), [verb.id]);
+  const choiceOptionsPP = useMemo(() => buildChoiceOptionsPP(verb), [verb]);
 
   const correctTriple = `${verb.infinitive} — ${verb.pastSimple} — ${verb.pastParticiple}`;
 
@@ -122,9 +123,7 @@ export function QuestionRenderer(props: QuestionRendererProps) {
               });
             }}
           >
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              Заполните пропущенные формы
-            </div>
+            <div className="text-xs text-muted-foreground">Заполните пропущенные формы</div>
             <div className="rounded-md bg-secondary/50 p-4 text-center font-mono text-xl">
               {verb.infinitive} — ____ — ____
             </div>
@@ -140,11 +139,20 @@ export function QuestionRenderer(props: QuestionRendererProps) {
             )}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">Past Simple</Label>
+                <Label htmlFor="answer-past-simple" className="text-xs">
+                  Past Simple
+                </Label>
                 <Input
+                  id="answer-past-simple"
                   autoFocus
                   value={ps}
                   onChange={(e) => setPs(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !pp.trim()) {
+                      e.preventDefault();
+                      pastParticipleRef.current?.focus();
+                    }
+                  }}
                   disabled={submitted}
                   placeholder="2-я форма"
                   autoComplete="off"
@@ -155,8 +163,12 @@ export function QuestionRenderer(props: QuestionRendererProps) {
                 />
               </div>
               <div>
-                <Label className="text-xs">Past Participle</Label>
+                <Label htmlFor="answer-past-participle" className="text-xs">
+                  Past Participle
+                </Label>
                 <Input
+                  id="answer-past-participle"
+                  ref={pastParticipleRef}
                   value={pp}
                   onChange={(e) => setPp(e.target.value)}
                   disabled={submitted}
@@ -189,9 +201,7 @@ export function QuestionRenderer(props: QuestionRendererProps) {
 
         {mode === "choice_pp" && (
           <>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              Выберите правильную форму
-            </div>
+            <div className="text-xs text-muted-foreground">Выберите правильную форму</div>
             <div className="rounded-md bg-secondary/50 p-4 text-center text-base md:text-lg">
               {choicePPSentence}
             </div>
@@ -242,9 +252,7 @@ export function QuestionRenderer(props: QuestionRendererProps) {
 
         {mode === "choice_ps_pp" && (
           <>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              Past Simple или Past Participle?
-            </div>
+            <div className="text-xs text-muted-foreground">Past Simple или Past Participle?</div>
             <div className="rounded-md bg-secondary/50 p-4 text-center text-base md:text-lg">
               {choicePSSentence}
             </div>
@@ -311,13 +319,13 @@ export function QuestionRenderer(props: QuestionRendererProps) {
               });
             }}
           >
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              Переведите и назовите три формы
-            </div>
+            <div className="text-xs text-muted-foreground">Переведите и назовите три формы</div>
             <div className="rounded-md bg-secondary/50 p-4 text-center text-xl">
               {verb.translation}
             </div>
             <Input
+              id="answer-triple"
+              aria-label="Три формы глагола"
               autoFocus
               placeholder="инфинитив — past simple — past participle"
               value={tripleInput}
@@ -344,9 +352,7 @@ export function QuestionRenderer(props: QuestionRendererProps) {
 
         {mode === "self_check" && (
           <>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              Быстрая самопроверка
-            </div>
+            <div className="text-xs text-muted-foreground">Быстрая самопроверка</div>
             <div className="rounded-md bg-secondary/50 p-4 text-center">
               <div className="font-mono text-2xl">{verb.infinitive} — ? — ?</div>
               {effShowTranslation && (
@@ -361,13 +367,13 @@ export function QuestionRenderer(props: QuestionRendererProps) {
                     markSelfCheck(verb.id, "unknown");
                     finish({
                       result: "wrong",
-                      userAnswer: "Не знал",
+                      userAnswer: "Не вспомнил",
                       correctAnswer: correctTriple,
                       explanation: explainSelfCheck(verb, "unknown"),
                     });
                   }}
                 >
-                  Не знал
+                  Не вспомнил
                 </Button>
                 <Button
                   variant="secondary"
@@ -388,13 +394,13 @@ export function QuestionRenderer(props: QuestionRendererProps) {
                     markSelfCheck(verb.id, "known");
                     finish({
                       result: "correct",
-                      userAnswer: "Знал",
+                      userAnswer: "Вспомнил",
                       correctAnswer: correctTriple,
                       explanation: explainSelfCheck(verb, "known"),
                     });
                   }}
                 >
-                  Знал
+                  Вспомнил
                 </Button>
               </div>
             ) : (

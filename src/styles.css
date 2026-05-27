@@ -55,8 +55,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 :root {
@@ -169,24 +169,61 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-weight: 400;
-    letter-spacing: -0.005em;
+    letter-spacing: 0;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
     color: var(--color-foreground);
   }
 
-  button, a, [role="button"], input, select, textarea {
-    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out,
-      border-color 0.2s ease-in-out, transform 0.2s ease-in-out,
-      box-shadow 0.2s ease-in-out, opacity 0.2s ease-in-out;
+  button,
+  a,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    transition:
+      background-color 0.2s ease-in-out,
+      color 0.2s ease-in-out,
+      border-color 0.2s ease-in-out,
+      transform 0.2s ease-in-out,
+      box-shadow 0.2s ease-in-out,
+      opacity 0.2s ease-in-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    transform: none !important;
   }
 }
 
 @keyframes shadow-loading {
-  0%   { transform: translateX(-100%); }
-  50%  { transform: translateX(120%); }
-  100% { transform: translateX(320%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
 }

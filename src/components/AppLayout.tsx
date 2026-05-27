@@ -21,11 +21,11 @@ import {
 } from "@/components/ui/sheet";
 
 const NAV = [
-  { to: "/", label: "Главная", icon: Home },
+  { to: "/", label: "Обзор", icon: Home },
   { to: "/groups", label: "Группы", icon: Layers },
   { to: "/practice", label: "Тренировка", icon: Dumbbell },
   { to: "/shadowing", label: "Shadowing", icon: Mic },
-  { to: "/weak", label: "Слабые", icon: AlertTriangle },
+  { to: "/weak", label: "Сложные", icon: AlertTriangle },
   { to: "/progress", label: "Прогресс", icon: BarChart3 },
   { to: "/settings", label: "Настройки", icon: SettingsIcon },
 ] as const;
@@ -43,6 +43,13 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <a
+        href="#main-content"
+        className="sr-only z-50 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground shadow focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+      >
+        К содержимому
+      </a>
+
       {/* Top nav (desktop) — 80px */}
       <header className="sticky top-0 z-30 hidden border-b border-border bg-background/90 backdrop-blur md:block">
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
@@ -51,10 +58,8 @@ export function AppLayout() {
               A
             </div>
             <div className="leading-tight">
-              <div className="text-base font-extrabold tracking-tight">актив</div>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Irregular Verbs
-              </div>
+              <div className="text-base font-extrabold">актив</div>
+              <div className="text-[11px] font-medium text-muted-foreground">Irregular Verbs</div>
             </div>
           </Link>
           <nav className="flex items-center gap-1">
@@ -62,6 +67,7 @@ export function AppLayout() {
               <Link
                 key={item.to}
                 to={item.to}
+                aria-current={isActive(item.to) ? "page" : undefined}
                 className={cn(
                   "rounded-md px-4 py-2 text-sm font-semibold transition-all duration-200",
                   isActive(item.to)
@@ -83,12 +89,15 @@ export function AppLayout() {
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground font-extrabold shadow-sm">
               A
             </div>
-            <span className="text-base font-extrabold tracking-tight">актив</span>
+            <span className="text-base font-extrabold">актив</span>
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pb-32 pt-6 md:px-6 md:pb-12 md:pt-10">
+      <main
+        id="main-content"
+        className="mx-auto max-w-6xl px-4 pb-32 pt-6 md:px-6 md:pb-12 md:pt-10"
+      >
         <Outlet />
       </main>
 
@@ -102,6 +111,7 @@ export function AppLayout() {
               <Link
                 key={item.to}
                 to={item.to}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center justify-center rounded-md px-1 py-1.5 text-[11px] leading-tight transition-colors",
                   active ? "text-primary" : "text-muted-foreground",
@@ -116,14 +126,15 @@ export function AppLayout() {
             <SheetTrigger asChild>
               <button
                 type="button"
+                aria-label="Ещё разделы"
+                aria-expanded={moreOpen}
+                aria-current={moreActive ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center justify-center rounded-md px-1 py-1.5 text-[11px] leading-tight transition-colors",
                   moreActive ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <MoreHorizontal
-                  className={cn("mb-0.5 h-5 w-5", moreActive && "stroke-[2.5]")}
-                />
+                <MoreHorizontal className={cn("mb-0.5 h-5 w-5", moreActive && "stroke-[2.5]")} />
                 <span className="truncate">Ещё</span>
               </button>
             </SheetTrigger>
@@ -142,12 +153,11 @@ export function AppLayout() {
                     <Link
                       key={item.to}
                       to={item.to}
+                      aria-current={active ? "page" : undefined}
                       onClick={() => setMoreOpen(false)}
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-3 text-sm transition-colors",
-                        active
-                          ? "bg-secondary text-secondary-foreground"
-                          : "hover:bg-secondary/60",
+                        active ? "bg-secondary text-secondary-foreground" : "hover:bg-secondary/60",
                       )}
                     >
                       <Icon className="h-5 w-5" />

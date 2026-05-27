@@ -84,20 +84,15 @@ function SettingsPage() {
       setImportOpen(false);
       toast.success("Прогресс успешно импортирован.");
       if (res.skippedUnknownVerbs.length > 0) {
-        toast.message(
-          "Часть данных пропущена: некоторые глаголы не найдены в текущей базе.",
-          {
-            description: `Пропущено идентификаторов: ${res.skippedUnknownVerbs.length}.`,
-          },
-        );
+        toast.message("Часть данных пропущена: некоторые глаголы не найдены в текущей базе.", {
+          description: `Пропущено идентификаторов: ${res.skippedUnknownVerbs.length}.`,
+        });
       }
     } catch (err) {
       setPendingImportText(null);
       setImportOpen(false);
       toast.error(
-        err instanceof BackupShapeError
-          ? err.message
-          : "Не удалось импортировать прогресс.",
+        err instanceof BackupShapeError ? err.message : "Не удалось импортировать прогресс.",
       );
     }
   }
@@ -126,13 +121,8 @@ function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Настройки</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Параметры тренировок и Shadowing. Сохраняются автоматически.
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Прогресс хранится локально в этом браузере.
-        </p>
+        <h1 className="text-2xl font-semibold md:text-3xl">Настройки</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Параметры сохраняются в этом браузере.</p>
       </header>
 
       <Card>
@@ -140,14 +130,14 @@ function SettingsPage() {
           <CardTitle className="text-base">Тренировки</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field label="Количество вопросов по умолчанию">
+          <Field id="settings-question-count" label="Количество вопросов по умолчанию">
             <Select
               value={String(settings.defaultQuestionCount)}
               onValueChange={(v) =>
                 update("defaultQuestionCount", Number(v) as Settings["defaultQuestionCount"])
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="settings-question-count">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -160,12 +150,12 @@ function SettingsPage() {
             </Select>
           </Field>
 
-          <Field label="Сложность">
+          <Field id="settings-difficulty" label="Сложность">
             <Select
               value={settings.difficulty}
               onValueChange={(v) => update("difficulty", v as Settings["difficulty"])}
             >
-              <SelectTrigger>
+              <SelectTrigger id="settings-difficulty">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -177,12 +167,14 @@ function SettingsPage() {
           </Field>
 
           <ToggleField
+            id="settings-show-translation"
             label="Показывать перевод"
             description="Перевод глагола в карточках и упражнениях."
             checked={settings.showTranslation}
             onCheckedChange={(v) => update("showTranslation", v)}
           />
           <ToggleField
+            id="settings-show-examples"
             label="Показывать примеры"
             description="Примеры использования в Past Simple и Present Perfect."
             checked={settings.showExamples}
@@ -196,12 +188,12 @@ function SettingsPage() {
           <CardTitle className="text-base">Shadowing</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field label="Акцент по умолчанию">
+          <Field id="settings-accent" label="Акцент по умолчанию">
             <Select
               value={settings.defaultAccent}
               onValueChange={(v) => update("defaultAccent", v as Settings["defaultAccent"])}
             >
-              <SelectTrigger>
+              <SelectTrigger id="settings-accent">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -211,12 +203,12 @@ function SettingsPage() {
             </Select>
           </Field>
 
-          <Field label="Скорость речи">
+          <Field id="settings-speed" label="Скорость речи">
             <Select
               value={settings.defaultSpeed}
               onValueChange={(v) => update("defaultSpeed", v as Settings["defaultSpeed"])}
             >
-              <SelectTrigger>
+              <SelectTrigger id="settings-speed">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -238,14 +230,14 @@ function SettingsPage() {
             </div>
           </Field>
 
-          <Field label="Пауза после диктора (сек)">
+          <Field id="settings-pause" label="Пауза после диктора (сек)">
             <Select
               value={String(settings.pauseAfterSpeakerSec)}
               onValueChange={(v) =>
                 update("pauseAfterSpeakerSec", Number(v) as Settings["pauseAfterSpeakerSec"])
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="settings-pause">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -258,14 +250,14 @@ function SettingsPage() {
             </Select>
           </Field>
 
-          <Field label="Повторить каждую фразу (раз)">
+          <Field id="settings-repeat" label="Повторить каждую фразу (раз)">
             <Select
               value={String(settings.repeatPhraseCount)}
               onValueChange={(v) =>
                 update("repeatPhraseCount", Number(v) as Settings["repeatPhraseCount"])
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="settings-repeat">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -286,8 +278,7 @@ function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Сохраните локальный прогресс в файл и восстановите его в другом браузере
-            или на другом устройстве. Данные никуда не отправляются.
+            Сохраните прогресс в файл или восстановите его на другом устройстве.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={handleExport}>
@@ -305,8 +296,8 @@ function SettingsPage() {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            При импорте текущий прогресс в этом браузере будет заменён данными из файла.
-            Глаголы, отсутствующие в текущей базе, безопасно пропускаются.
+            При импорте текущий прогресс в этом браузере будет заменён данными из файла. Глаголы,
+            отсутствующие в текущей базе, безопасно пропускаются.
           </p>
         </CardContent>
       </Card>
@@ -349,8 +340,7 @@ function SettingsPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Сбросить прогресс?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Будут удалены все данные о тренировках, Shadowing и сессиях. Настройки
-                  сохранятся.
+                  Будут удалены все данные о тренировках, Shadowing и сессиях. Настройки сохранятся.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -372,21 +362,25 @@ function SettingsPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ id, label, children }: { id?: string; label: string; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
-      <Label className="text-sm">{label}</Label>
+      <Label htmlFor={id} className="text-sm">
+        {label}
+      </Label>
       {children}
     </div>
   );
 }
 
 function ToggleField({
+  id,
   label,
   description,
   checked,
   onCheckedChange,
 }: {
+  id: string;
   label: string;
   description?: string;
   checked: boolean;
@@ -395,10 +389,12 @@ function ToggleField({
   return (
     <div className="flex items-start justify-between gap-3 rounded-md border p-3">
       <div>
-        <div className="text-sm font-medium">{label}</div>
+        <Label htmlFor={id} className="text-sm font-medium">
+          {label}
+        </Label>
         {description && <div className="text-xs text-muted-foreground">{description}</div>}
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   );
 }

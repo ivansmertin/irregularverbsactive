@@ -36,22 +36,16 @@ export function VerbCard({ verb }: { verb: Verb }) {
         {showExamples && (
           <div className="space-y-1.5 text-sm">
             <div>
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Past Simple ·{" "}
-              </span>
+              <span className="text-xs font-medium text-muted-foreground">Past Simple · </span>
               <span>{verb.examples.pastSimple}</span>
             </div>
             <div>
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Present Perfect ·{" "}
-              </span>
+              <span className="text-xs font-medium text-muted-foreground">Present Perfect · </span>
               <span>{verb.examples.presentPerfect}</span>
             </div>
             {verb.examples.passive && (
               <div>
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Passive ·{" "}
-                </span>
+                <span className="text-xs font-medium text-muted-foreground">Passive · </span>
                 <span>{verb.examples.passive}</span>
               </div>
             )}
@@ -66,10 +60,7 @@ export function VerbCard({ verb }: { verb: Verb }) {
 
         <div className="mt-auto flex gap-2 pt-1">
           <Button asChild size="sm" variant="outline" className="flex-1">
-            <Link
-              to="/practice"
-              search={{ scope: "single", verbId: verb.id }}
-            >
+            <Link to="/practice" search={{ scope: "single", verbId: verb.id }}>
               Тренировать
             </Link>
           </Button>

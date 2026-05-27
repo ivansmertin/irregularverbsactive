@@ -18,7 +18,7 @@ function ProgressPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Прогресс</h1>
+        <h1 className="text-2xl font-semibold md:text-3xl">Прогресс</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Сводка по изучению глаголов, точности и Shadowing.
         </p>
@@ -28,7 +28,7 @@ function ProgressPage() {
         <Stat label="Всего глаголов" value={stats.total.toString()} />
         <Stat label="Изучается" value={stats.touched.toString()} />
         <Stat label="Освоено" value={stats.mastered.toString()} />
-        <Stat label="Слабых" value={stats.weak.toString()} />
+        <Stat label="Сложных" value={stats.weak.toString()} />
       </div>
 
       <Card>
@@ -55,12 +55,7 @@ function ProgressPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {VERB_GROUPS.map((g) => (
-            <GroupRow
-              key={g.id}
-              groupId={g.id}
-              title={g.title}
-              subtitle={g.subtitle}
-            />
+            <GroupRow key={g.id} groupId={g.id} title={g.title} subtitle={g.subtitle} />
           ))}
         </CardContent>
       </Card>
@@ -128,7 +123,7 @@ function Row({ label, value, percent }: { label: string; value: string; percent:
         <span className="text-muted-foreground">{label}</span>
         <span className="font-medium">{value}</span>
       </div>
-      <Progress value={percent} />
+      <Progress value={percent} aria-label={label} aria-valuetext={`${value}`} />
     </div>
   );
 }
@@ -154,7 +149,11 @@ function GroupRow({
           {p.mastered}/{p.count} · {p.percent}%
         </span>
       </div>
-      <Progress value={p.percent} />
+      <Progress
+        value={p.percent}
+        aria-label={`Прогресс группы ${title}`}
+        aria-valuetext={`${p.mastered} из ${p.count}, ${p.percent}%`}
+      />
     </div>
   );
 }

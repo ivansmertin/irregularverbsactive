@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, AlertTriangle, Check, Play, RotateCw, Volume2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, AlertTriangle, Check, Play, RotateCw, Square, Volume2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ const MODE_LABEL: Record<Mode, string> = {
   forms: "Формы глагола",
   sentences: "Фразы с глаголом",
   group_rhythm: "Групповой ритм",
-  weak: "Слабые для Shadowing",
+  weak: "Сложные для Shadowing",
   compare: "British vs American",
 };
 
@@ -52,8 +52,22 @@ export const Route = createFileRoute("/shadowing")({
   component: ShadowingPage,
 });
 
-function delay(ms: number) {
-  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+function delay(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      window.clearTimeout(timeout);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 function ShadowingPage() {
@@ -61,11 +75,14 @@ function ShadowingPage() {
   const settings = useMemo(() => getSettings(), []);
   const [accent, setAccent] = useState<Accent>(settings.defaultAccent);
   const [speed, setSpeed] = useState<SpeechSpeed>(settings.defaultSpeed);
-  const [mode, setMode] = useState<Mode>(search.mode ?? (search.groupId ? "group_rhythm" : "forms"));
+  const [mode, setMode] = useState<Mode>(
+    search.mode ?? (search.groupId ? "group_rhythm" : "forms"),
+  );
   const [verbIndex, setVerbIndex] = useState(0);
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechAvailable, setSpeechAvailable] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const queue = useMemo(() => {
     const sh = getShadowing();
@@ -87,7 +104,10 @@ function ShadowingPage() {
 
   useEffect(() => {
     setSpeechAvailable(isSpeechAvailable());
-    return () => stopSpeaking();
+    return () => {
+      abortRef.current?.abort();
+      stopSpeaking();
+    };
   }, []);
 
   useEffect(() => {
@@ -133,33 +153,52 @@ function ShadowingPage() {
       return;
     }
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     stopSpeaking();
     setIsSpeaking(true);
     try {
       if (mode === "compare") {
         const text = verb.shadowing.sentenceTexts[0] ?? verb.shadowing.formsText;
         for (let i = 0; i < settings.repeatPhraseCount; i++) {
-          await speakAudio({ text, accent: "british", speed, type: "sentence" });
-          await delay(settings.pauseAfterSpeakerSec * 1000);
-          await speakAudio({ text, accent: "american", speed, type: "sentence" });
-          if (i < settings.repeatPhraseCount - 1) await delay(400);
+          await speakAudio(
+            { text, accent: "british", speed, type: "sentence" },
+            { signal: controller.signal },
+          );
+          await delay(settings.pauseAfterSpeakerSec * 1000, controller.signal);
+          await speakAudio(
+            { text, accent: "american", speed, type: "sentence" },
+            { signal: controller.signal },
+          );
+          if (i < settings.repeatPhraseCount - 1) await delay(400, controller.signal);
         }
       } else {
         const req = currentRequest();
         if (!req) throw new Error("Нет текста для воспроизведения.");
         const repeats = mode === "group_rhythm" ? 1 : settings.repeatPhraseCount;
         for (let i = 0; i < repeats; i++) {
-          await speakAudio(req);
-          if (i < repeats - 1) await delay(400);
+          await speakAudio(req, { signal: controller.signal });
+          if (i < repeats - 1) await delay(400, controller.signal);
         }
       }
 
       recordListen(verb.id);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Ошибка воспроизведения.");
+      if ((e as { name?: string })?.name !== "AbortError") {
+        toast.error(e instanceof Error ? e.message : "Ошибка воспроизведения.");
+      }
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setIsSpeaking(false);
     }
+  }
+
+  function stopPlayback() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    stopSpeaking();
+    setIsSpeaking(false);
   }
 
   function next() {
@@ -190,31 +229,29 @@ function ShadowingPage() {
       <div className="mx-auto max-w-xl">
         <Card>
           <CardContent className="pt-6 text-center text-sm text-muted-foreground">
-            Нет глаголов для этого режима. Попробуйте сменить режим или добавить глаголы в слабые.
+            Нет глаголов для этого режима. Попробуйте сменить режим или отметить сложные глаголы.
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const currentText =
-    !verb
-      ? ""
-      : mode === "compare"
-        ? verb.shadowing.sentenceTexts[0] ?? verb.shadowing.formsText
-        : mode === "sentences"
-          ? verb.shadowing.sentenceTexts[phraseIndex] ?? verb.shadowing.formsText
-          : mode === "group_rhythm"
-            ? queue.map((v) => v.shadowing.formsText).join(" · ")
-            : verb.shadowing.formsText;
+  const currentText = !verb
+    ? ""
+    : mode === "compare"
+      ? (verb.shadowing.sentenceTexts[0] ?? verb.shadowing.formsText)
+      : mode === "sentences"
+        ? (verb.shadowing.sentenceTexts[phraseIndex] ?? verb.shadowing.formsText)
+        : mode === "group_rhythm"
+          ? queue.map((v) => v.shadowing.formsText).join(" · ")
+          : verb.shadowing.formsText;
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Shadowing</h1>
+        <h1 className="text-2xl font-semibold md:text-3xl">Shadowing</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Послушайте диктора и повторите за ним вслух. Регулярная практика автоматизирует формы и
-          улучшает произношение.
+          Слушайте формы и фразы, затем повторяйте вслух.
         </p>
       </header>
 
@@ -243,9 +280,11 @@ function ShadowingPage() {
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           <div>
-            <Label className="text-xs">Акцент</Label>
+            <Label htmlFor="shadowing-accent" className="text-xs">
+              Акцент
+            </Label>
             <Select value={accent} onValueChange={(v) => setAccent(v as Accent)}>
-              <SelectTrigger className="mt-1.5">
+              <SelectTrigger id="shadowing-accent" className="mt-1.5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -255,9 +294,11 @@ function ShadowingPage() {
             </Select>
           </div>
           <div>
-            <Label className="text-xs">Скорость</Label>
+            <Label htmlFor="shadowing-speed" className="text-xs">
+              Скорость
+            </Label>
             <Select value={speed} onValueChange={(v) => setSpeed(v as SpeechSpeed)}>
-              <SelectTrigger className="mt-1.5">
+              <SelectTrigger id="shadowing-speed" className="mt-1.5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -268,9 +309,11 @@ function ShadowingPage() {
             </Select>
           </div>
           <div>
-            <Label className="text-xs">Режим</Label>
+            <Label htmlFor="shadowing-mode" className="text-xs">
+              Режим
+            </Label>
             <Select value={mode} onValueChange={(v) => setMode(v as Mode)}>
-              <SelectTrigger className="mt-1.5">
+              <SelectTrigger id="shadowing-mode" className="mt-1.5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -287,7 +330,7 @@ function ShadowingPage() {
 
       <Card>
         <CardContent className="space-y-4 pt-6">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {mode === "sentences"
               ? "Фраза"
               : mode === "group_rhythm"
@@ -311,10 +354,20 @@ function ShadowingPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Button size="lg" className="h-14 text-base" onClick={playCurrent} disabled={isSpeaking}>
+            <Button
+              size="lg"
+              className="h-14 text-base"
+              onClick={playCurrent}
+              disabled={isSpeaking}
+            >
               <Play className="mr-2 h-5 w-5" />
               Прослушать
             </Button>
+            {isSpeaking && (
+              <Button variant="outline" onClick={stopPlayback}>
+                <Square className="mr-2 h-4 w-4" /> Остановить
+              </Button>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={() => void playCurrent()} disabled={isSpeaking}>

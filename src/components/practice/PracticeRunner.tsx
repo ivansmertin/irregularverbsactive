@@ -102,11 +102,11 @@ export function PracticeRunner({
   if (total === 0) {
     const emptyMessage =
       scope === "weak"
-        ? "Слабых глаголов пока нет — отметьте трудные в тренировке или Shadowing, и они появятся здесь."
+        ? "Сложных глаголов пока нет — отметьте трудные в тренировке или Shadowing, и они появятся здесь."
         : scope === "due"
           ? "Сегодня нет глаголов к повторению. Возьмите «Все» или «Новые»."
           : scope === "new"
-            ? "Все глаголы уже встречались. Попробуйте «Все» или «Слабые»."
+            ? "Все глаголы уже встречались. Попробуйте «Все» или «Сложные»."
             : scope === "group"
               ? "В этой группе пока нет глаголов."
               : scope === "single"
@@ -164,7 +164,11 @@ export function PracticeRunner({
           {answeredCount > 0 && <span className="ml-2">· Точность {liveAccuracy}%</span>}
         </div>
       </div>
-      <Progress value={progressValue} />
+      <Progress
+        value={progressValue}
+        aria-label="Прогресс тренировки"
+        aria-valuetext={`Вопрос ${index + 1} из ${total}`}
+      />
 
       <QuestionRenderer
         key={verb.id + index + currentMode}
