@@ -103,8 +103,6 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultSpeed: "normal",
   pauseAfterSpeakerSec: 2,
   repeatPhraseCount: 1,
-  voiceGender: "female",
-  prefetchNext: true,
 };
 
 // ----- Storage accessors -------------------------------------------------

@@ -62,35 +62,17 @@ export type SpeechRequest = {
   text: string;
   accent: Accent;
   speed: SpeechSpeed;
-  voiceId?: string;
   type: "verb_forms" | "sentence" | "group_sequence";
 };
 
 export type SpeechResult = {
-  audioUrl?: string;
   durationMs?: number;
   provider: string;
-  /** Local in-memory cache hit (per-session). */
-  cached: boolean;
-  /** Upstream Kokoro proxy cache status, if reported. */
-  upstreamCache?: "HIT" | "MISS";
-  /** Voice actually used by the server (echo of X-TTS-Voice). */
-  voiceId?: string;
   /** Accent that was requested. */
   accent?: Accent;
-  /** Response Content-Type header from /api/tts (e.g. "audio/mpeg"). */
-  contentType?: string;
-  /** Audio payload size in bytes if known. */
-  audioBytes?: number;
-  /** Actual HTMLAudioElement.playbackRate applied on the client (Kokoro only). */
-  playbackRate?: number;
-  /** Upstream synthesis duration in ms (X-TTS-Duration-Ms). */
-  upstreamDurationMs?: number;
 };
 
 export type Difficulty = "easy" | "standard" | "hard";
-
-export type VoiceGender = "female" | "male";
 
 export type Settings = {
   defaultQuestionCount: 5 | 10 | 20 | 30;
@@ -101,10 +83,6 @@ export type Settings = {
   defaultSpeed: SpeechSpeed;
   pauseAfterSpeakerSec: 1 | 2 | 3 | 5;
   repeatPhraseCount: 1 | 2 | 3;
-  /** Preferred Kokoro voice gender for Shadowing. */
-  voiceGender: VoiceGender;
-  /** Prefetch the next Shadowing item after successful playback. */
-  prefetchNext: boolean;
 };
 
 export type PracticeSession = {

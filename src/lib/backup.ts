@@ -24,7 +24,6 @@ import type {
   ShadowingProgress,
   SpeechSpeed,
   UserVerbProgress,
-  VoiceGender,
 } from "./types";
 
 export const APP_NAME = "irregular-verbs-trainer";
@@ -158,12 +157,6 @@ function sanitizeSettings(raw: unknown): Settings {
   out.repeatPhraseCount = ([1, 2, 3] as const).includes(repeatRaw as 1 | 2 | 3)
     ? (repeatRaw as Settings["repeatPhraseCount"])
     : DEFAULT_SETTINGS.repeatPhraseCount;
-  out.voiceGender = asEnum<VoiceGender>(
-    get("voiceGender"),
-    ["female", "male"],
-    DEFAULT_SETTINGS.voiceGender,
-  );
-  out.prefetchNext = asBool(get("prefetchNext"), DEFAULT_SETTINGS.prefetchNext);
   return out;
 }
 

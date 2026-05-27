@@ -17,7 +17,6 @@ import { Route as PracticeRouteImport } from './routes/practice'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GroupsIndexRouteImport } from './routes/groups.index'
 import { Route as GroupsGroupIdRouteImport } from './routes/groups.$groupId'
-import { Route as ApiTtsRouteImport } from './routes/api/tts'
 
 const WeakRoute = WeakRouteImport.update({
   id: '/weak',
@@ -59,11 +58,6 @@ const GroupsGroupIdRoute = GroupsGroupIdRouteImport.update({
   path: '/groups/$groupId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTtsRoute = ApiTtsRouteImport.update({
-  id: '/api/tts',
-  path: '/api/tts',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,7 +66,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/shadowing': typeof ShadowingRoute
   '/weak': typeof WeakRoute
-  '/api/tts': typeof ApiTtsRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/groups/': typeof GroupsIndexRoute
 }
@@ -83,7 +76,6 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/shadowing': typeof ShadowingRoute
   '/weak': typeof WeakRoute
-  '/api/tts': typeof ApiTtsRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/groups': typeof GroupsIndexRoute
 }
@@ -95,7 +87,6 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/shadowing': typeof ShadowingRoute
   '/weak': typeof WeakRoute
-  '/api/tts': typeof ApiTtsRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/groups/': typeof GroupsIndexRoute
 }
@@ -108,7 +99,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shadowing'
     | '/weak'
-    | '/api/tts'
     | '/groups/$groupId'
     | '/groups/'
   fileRoutesByTo: FileRoutesByTo
@@ -119,7 +109,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shadowing'
     | '/weak'
-    | '/api/tts'
     | '/groups/$groupId'
     | '/groups'
   id:
@@ -130,7 +119,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shadowing'
     | '/weak'
-    | '/api/tts'
     | '/groups/$groupId'
     | '/groups/'
   fileRoutesById: FileRoutesById
@@ -142,7 +130,6 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ShadowingRoute: typeof ShadowingRoute
   WeakRoute: typeof WeakRoute
-  ApiTtsRoute: typeof ApiTtsRoute
   GroupsGroupIdRoute: typeof GroupsGroupIdRoute
   GroupsIndexRoute: typeof GroupsIndexRoute
 }
@@ -205,13 +192,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GroupsGroupIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/tts': {
-      id: '/api/tts'
-      path: '/api/tts'
-      fullPath: '/api/tts'
-      preLoaderRoute: typeof ApiTtsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -222,7 +202,6 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ShadowingRoute: ShadowingRoute,
   WeakRoute: WeakRoute,
-  ApiTtsRoute: ApiTtsRoute,
   GroupsGroupIdRoute: GroupsGroupIdRoute,
   GroupsIndexRoute: GroupsIndexRoute,
 }
