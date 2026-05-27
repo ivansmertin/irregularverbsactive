@@ -82,17 +82,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Irregular Verbs Trainer — тренажёр неправильных глаголов" },
       {
         property: "og:description",
-        content:
-          "Тренажёр неправильных глаголов английского языка: группы, упражнения, Shadowing.",
+        content: "Тренажёр неправильных глаголов английского языка: группы, упражнения, Shadowing.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "Irregular Verbs Trainer — тренажёр неправильных глаголов" },
-      { name: "description", content: "Russian web app for learning English irregular verbs through patterns, active recall, and shadowing." },
-      { property: "og:description", content: "Russian web app for learning English irregular verbs through patterns, active recall, and shadowing." },
-      { name: "twitter:description", content: "Russian web app for learning English irregular verbs through patterns, active recall, and shadowing." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bfd32995-561e-412a-9b30-df5489fbacb3/id-preview-b6d31e23--aaeccf28-f830-4385-8548-3de0f66efe3a.lovable.app-1779719083915.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bfd32995-561e-412a-9b30-df5489fbacb3/id-preview-b6d31e23--aaeccf28-f830-4385-8548-3de0f66efe3a.lovable.app-1779719083915.png" },
+      {
+        name: "twitter:title",
+        content: "Irregular Verbs Trainer — тренажёр неправильных глаголов",
+      },
+      { name: "twitter:description", content: "Тренажёр неправильных глаголов английского языка." },
+      // og:image temporarily omitted — the prior URL (Lovable preview R2)
+      // is not under our control and may expire. Drop a 1200×630 PNG into
+      // /public/og.png and re-add { property: "og:image", content: "/og.png" }
+      // when ready.
     ],
     links: [
       { rel: "stylesheet", href: appCss },

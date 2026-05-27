@@ -52,10 +52,7 @@ const browserSpeedToRate: Record<SpeechSpeed, number> = {
  * Guaranteed client-side playbackRate for Kokoro MP3 audio.
  * Kokoro server-side speed may be ignored or weakly applied — clamp here.
  */
-export function playbackRateForSpeed(
-  speed: SpeechSpeed,
-  type: SpeechRequest["type"],
-): number {
+export function playbackRateForSpeed(speed: SpeechSpeed, type: SpeechRequest["type"]): number {
   const base = speed === "slow" ? 0.65 : speed === "fast" ? 0.92 : 0.78;
   const mult = type === "verb_forms" ? 0.95 : type === "group_sequence" ? 0.9 : 1.0;
   const rate = base * mult;
@@ -78,9 +75,7 @@ export const TTS_PREP_VERSION = "kokoro-verified-playbackrate-v4";
 export function cacheKey(req: SpeechRequest & { voiceId?: string }): string {
   const voice = req.voiceId ?? defaultVoiceId(req.accent);
   const normalized = req.text.replace(/\s+/g, " ").trim();
-  return fnv1a(
-    [normalized, req.accent, req.speed, voice, req.type, TTS_PREP_VERSION].join("|"),
-  );
+  return fnv1a([normalized, req.accent, req.speed, voice, req.type, TTS_PREP_VERSION].join("|"));
 }
 
 export function defaultVoiceId(accent: Accent): string {
@@ -93,10 +88,7 @@ export const RECOMMENDED_VOICES: Record<Accent, Record<"female" | "male", string
   british: { female: "bf_emma", male: "bm_lewis" },
 };
 
-export function recommendedVoiceId(
-  accent: Accent,
-  gender: "female" | "male",
-): string {
+export function recommendedVoiceId(accent: Accent, gender: "female" | "male"): string {
   return RECOMMENDED_VOICES[accent][gender];
 }
 
@@ -206,6 +198,11 @@ export type SpeakOptions = {
   noFallback?: boolean;
 };
 
+// Negative probe results expire after this window so a transient network
+// blip during the first probe doesn't disable Kokoro for the whole tab
+// session.
+const PROBE_NEGATIVE_TTL_MS = 60_000;
+
 class ServerSpeechProvider implements SpeechProvider {
   name = "server-tts";
   kind = "server" as const;
@@ -213,24 +210,53 @@ class ServerSpeechProvider implements SpeechProvider {
   private assetCache = new Map<string, AudioAsset>();
   private inflight = new Map<string, Promise<AudioAsset>>();
   private configured: boolean | null = null;
+  private configuredAt = 0;
+
+  constructor() {
+    // Revoke any outstanding blob URLs when the tab is closing. Helps
+    // browsers that don't aggressively GC blobs on navigation.
+    if (typeof window !== "undefined") {
+      window.addEventListener("pagehide", () => this.disposeBlobs(), { once: true });
+    }
+  }
 
   isAvailable(): boolean {
     return typeof window !== "undefined" && this.configured !== false;
   }
 
+  /** Release every cached blob URL. Used on tab unload and by tests. */
+  disposeBlobs(): void {
+    for (const asset of this.assetCache.values()) {
+      try {
+        URL.revokeObjectURL(asset.audioUrl);
+      } catch {
+        /* noop */
+      }
+    }
+    this.assetCache.clear();
+  }
+
   async probe(): Promise<boolean> {
-    if (this.configured !== null) return this.configured;
+    // Cached probe result. Negative result has a TTL so we recover from
+    // a transient hiccup (the previous code stuck on false forever).
+    if (this.configured === true) return true;
+    if (this.configured === false && Date.now() - this.configuredAt < PROBE_NEGATIVE_TTL_MS) {
+      return false;
+    }
     try {
       const res = await fetch(TTS_ENDPOINT, { method: "GET" });
       if (!res.ok) {
         this.configured = false;
+        this.configuredAt = Date.now();
         return false;
       }
       const data = (await res.json()) as TTSGetResponse;
       this.configured = !!data.configured;
+      this.configuredAt = Date.now();
       return this.configured;
     } catch {
       this.configured = false;
+      this.configuredAt = Date.now();
       return false;
     }
   }
@@ -255,8 +281,7 @@ class ServerSpeechProvider implements SpeechProvider {
     if (existing) return existing;
 
     const pending = (async () => {
-      const started =
-        typeof performance !== "undefined" ? performance.now() : Date.now();
+      const started = typeof performance !== "undefined" ? performance.now() : Date.now();
       const params = new URLSearchParams({
         text: req.text,
         accent: req.accent,
@@ -270,7 +295,10 @@ class ServerSpeechProvider implements SpeechProvider {
       });
 
       if (!res.ok) {
-        if (res.status === 503) this.configured = false;
+        if (res.status === 503) {
+          this.configured = false;
+          this.configuredAt = Date.now();
+        }
         let message = `Server TTS error (${res.status})`;
         try {
           const data = (await res.json()) as TTSErrorResponse;
@@ -308,8 +336,7 @@ class ServerSpeechProvider implements SpeechProvider {
         audioUrl,
         provider,
         upstreamCache,
-        upstreamDurationMs:
-          Number.isFinite(upstreamDurationMs) ? upstreamDurationMs : undefined,
+        upstreamDurationMs: Number.isFinite(upstreamDurationMs) ? upstreamDurationMs : undefined,
         contentType,
         audioBytes: blob.size,
         createdAt: new Date().toISOString(),
@@ -335,8 +362,7 @@ class ServerSpeechProvider implements SpeechProvider {
       this.configured = true;
 
       if (import.meta.env?.DEV) {
-        const ended =
-          typeof performance !== "undefined" ? performance.now() : Date.now();
+        const ended = typeof performance !== "undefined" ? performance.now() : Date.now();
         console.debug(
           `[tts] provider=${provider} voice=${serverVoiceId ?? "?"} upstream=${upstreamCache ?? "?"} type=${req.type} accent=${req.accent} speed=${req.speed} bytes=${blob.size} duration_ms=${Math.round(ended - started)}`,
         );
@@ -369,7 +395,11 @@ class ServerSpeechProvider implements SpeechProvider {
       audio.playbackRate = playbackRate;
       // Re-apply on metadata load (some browsers reset rate when src changes).
       audio.onloadedmetadata = () => {
-        try { audio.playbackRate = playbackRate; } catch { /* noop */ }
+        try {
+          audio.playbackRate = playbackRate;
+        } catch {
+          /* noop */
+        }
       };
       this.audio = audio;
       const onAbort = () => {
@@ -422,7 +452,6 @@ class ServerSpeechProvider implements SpeechProvider {
   }
 }
 
-
 // ---------------- Selection logic ----------------------------------------
 
 let _browser: BrowserSpeechProvider | null = null;
@@ -474,10 +503,7 @@ export function getSpeechProvider(): SpeechProvider {
  * the browser provider. Stops any currently-playing audio first so playback
  * never overlaps.
  */
-export async function speak(
-  req: SpeechRequest,
-  opts?: SpeakOptions,
-): Promise<SpeechResult> {
+export async function speak(req: SpeechRequest, opts?: SpeakOptions): Promise<SpeechResult> {
   const server = getServerProvider();
   const browser = getBrowserProvider();
 
@@ -560,9 +586,7 @@ export function stopSpeaking(): void {
  * audible. Does NOT accept an AbortSignal — the signal that aborted the server
  * request must not also abort this fallback playback.
  */
-export async function speakBrowserFallback(
-  req: SpeechRequest,
-): Promise<SpeechResult> {
+export async function speakBrowserFallback(req: SpeechRequest): Promise<SpeechResult> {
   const browser = getBrowserProvider();
   if (!browser.isAvailable()) {
     throw new Error("Браузерный голосовой движок недоступен.");
@@ -572,4 +596,3 @@ export async function speakBrowserFallback(
   const res = await browser.speak(req);
   return { ...res, voiceId: "browser", accent: req.accent };
 }
-

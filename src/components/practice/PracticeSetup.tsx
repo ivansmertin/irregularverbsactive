@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { VERB_GROUPS } from "@/lib/data/groups";
-import { getSettings } from "@/lib/storage";
+import { useProgress, useSettings } from "@/hooks/use-storage";
+import { pickPool } from "@/lib/practice/generation";
 import {
   MODE_LABEL,
   PRACTICE_MODES,
@@ -40,14 +42,12 @@ export function PracticeSetup({
   forceSingleVerbId?: string;
   onStart: (values: PracticeSetupValues) => void;
 }) {
-  const settings = useMemo(() => getSettings(), []);
+  // useSettings subscribes to storage so toggling defaults in /settings
+  // reflects here without a remount.
+  const settings = useSettings();
   const [scope, setScope] = useState<PracticeScope>(initial.scope ?? "all");
-  const [groupId, setGroupId] = useState<string>(
-    initial.groupId ?? VERB_GROUPS[0].id,
-  );
-  const [count, setCount] = useState<number>(
-    initial.count ?? settings.defaultQuestionCount,
-  );
+  const [groupId, setGroupId] = useState<string>(initial.groupId ?? VERB_GROUPS[0].id);
+  const [count, setCount] = useState<number>(initial.count ?? settings.defaultQuestionCount);
   const [mode, setMode] = useState<PracticeMode>(initial.mode ?? "auto");
 
   // If we arrived with a `single` scope + verbId, lock to 1 question.
@@ -60,13 +60,25 @@ export function PracticeSetup({
 
   const visibleScopes = PRACTICE_SCOPES.filter((s) => s !== "single");
 
+  // Pool size for the currently-selected scope — surfaces "0 глаголов"
+  // before the user starts, so empty scopes (no weak, no due, empty
+  // group) don't surprise them on the runner screen. The progress dep
+  // makes the badge re-evaluate when a finished session promotes /
+  // demotes verbs in storage.
+  const progress = useProgress();
+  const poolSize = useMemo(
+    () => pickPool(scope, scope === "group" ? groupId : undefined).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pickPool reads `progress` internally
+    [scope, groupId, progress],
+  );
+  const startDisabled = poolSize === 0;
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Тренировка</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Выберите, что и как тренировать. Ответы проверяются автоматически, а прогресс
-          сохраняется.
+          Выберите, что и как тренировать. Ответы проверяются автоматически, а прогресс сохраняется.
         </p>
       </header>
 
@@ -76,11 +88,20 @@ export function PracticeSetup({
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-              Набор
-            </Label>
+            <div className="mb-1.5 flex items-center justify-between">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Набор</Label>
+              <Badge variant={poolSize === 0 ? "destructive" : "secondary"} className="text-[10px]">
+                {poolSize === 0
+                  ? "пусто"
+                  : poolSize === 1
+                    ? "1 глагол"
+                    : poolSize < 5
+                      ? `${poolSize} глагола`
+                      : `${poolSize} глаголов`}
+              </Badge>
+            </div>
             <Select value={scope} onValueChange={(v) => setScope(v as PracticeScope)}>
-              <SelectTrigger className="mt-1.5">
+              <SelectTrigger>
                 <SelectValue placeholder="Выберите набор" />
               </SelectTrigger>
               <SelectContent>
@@ -91,6 +112,17 @@ export function PracticeSetup({
                 ))}
               </SelectContent>
             </Select>
+            {startDisabled && (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {scope === "weak"
+                  ? "Пока нет слабых глаголов — отметьте сложные в тренировке."
+                  : scope === "due"
+                    ? "Сегодня нет глаголов к повторению. Возьмите «Все»."
+                    : scope === "new"
+                      ? "Все глаголы уже встречались — попробуйте «Все»."
+                      : "В этом наборе нет глаголов."}
+              </p>
+            )}
           </div>
 
           {scope === "group" && (
@@ -157,9 +189,8 @@ export function PracticeSetup({
           <Button
             size="lg"
             className="w-full"
-            onClick={() =>
-              onStart({ scope, groupId, verbId: forceSingleVerbId, count, mode })
-            }
+            disabled={startDisabled}
+            onClick={() => onStart({ scope, groupId, verbId: forceSingleVerbId, count, mode })}
           >
             Начать тренировку <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
