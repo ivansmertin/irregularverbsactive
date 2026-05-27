@@ -1,84 +1,97 @@
-# /api/tts — Origin-check + KV rate-limit
+# /api/tts — Origin-check + (optional) rate-limit
 
 The TTS proxy was previously unauthenticated and unbounded — any caller
-could send arbitrary text and drain the Kokoro bill. The Worker now
-applies two guards before any upstream call:
+could send arbitrary text and drain the Kokoro bill. We now have three
+layers of protection:
 
-1. **Origin allowlist** — same-origin always, plus any host in
-   `ALLOWED_ORIGINS`. Cross-origin probes (`GET /api/tts` without text)
-   get a degraded `{configured:false}` response rather than a 403, so a
-   bad referrer can't fingerprint the deployment.
-2. **Sliding-window rate limit** in Workers KV — per-IP and global daily
-   cap. On 429 the response carries `Retry-After`.
+1. **Origin allowlist** (always on, no infra) — same-origin always, plus
+   any host in `ALLOWED_ORIGINS`. Cross-origin synthesis requests get
+   403; cross-origin probes get a degraded `{configured:false}` so a bad
+   referrer cannot fingerprint the deployment.
 
-## One-time setup
+2. **Server-side per-IP rate-limit** (always on, lives on the Kokoro
+   cache-proxy box at `/opt/kokoro-cache-proxy/main.py`) — 30 req/min per
+   IP, returns 429 with `Retry-After`. See `tail /opt/kokoro/cache/index.jsonl`
+   for THROTTLED entries.
 
-1. Create the KV namespace:
+3. **Edge per-IP rate-limit (opt-in)** — when an Upstash / Vercel KV
+   instance is bound, a second sliding-window counter runs in the Vercel
+   function before the request reaches the upstream. Caps daily volume
+   too. **Not required** because layer 2 already covers budget, but
+   recommended for production to stop traffic before it leaves Vercel.
 
-   ```sh
-   wrangler kv namespace create TTS_RATE_LIMIT
-   wrangler kv namespace create TTS_RATE_LIMIT --preview
+Also: the synth response uses `Cache-Control: private, max-age=…,
+immutable` + `Vary: Origin`. Vercel edge **does not** cache the response,
+so the guard cannot be bypassed by replaying URLs. Browsers still cache
+per-user, so repeated playback in a session is free.
+
+## Setup
+
+### Required env vars (Vercel Project Settings → Environment Variables)
+
+```
+KOKORO_TTS_API_KEY          (already set)
+KOKORO_TTS_ENDPOINT         (already set, defaults to api.snafstudio.ru)
+ALLOWED_ORIGINS             https://irregularverbsactive.vercel.app
+```
+
+`ALLOWED_ORIGINS` is comma-separated for multiple. Leave empty to allow
+only the request's own origin (same-host fetches).
+
+### Optional: Upstash rate-limit
+
+1. Vercel dashboard → Storage → Create KV (it's Upstash Redis underneath).
+2. Bind to the project. Vercel will set the following env vars
+   automatically:
+
+   ```
+   KV_REST_API_URL
+   KV_REST_API_TOKEN
    ```
 
-   Both commands print an `id`. Paste them into `wrangler.jsonc`:
-
-   ```jsonc
-   "kv_namespaces": [
-     {
-       "binding": "TTS_RATE_LIMIT",
-       "id": "<paste production id>",
-       "preview_id": "<paste preview id>"
-     }
-   ]
-   ```
-
-2. Set your production origin in `wrangler.jsonc → vars.ALLOWED_ORIGINS`,
-   e.g. `"https://verbs.example.com"`. Multiple comma-separated values
-   are allowed.
-
-3. Tune the limits if needed (defaults shown):
+3. Optionally tune limits via env:
 
    | Var | Default | Meaning |
    |---|---|---|
    | `TTS_RATE_LIMIT_PER_IP` | `60` | requests per window per IP |
    | `TTS_RATE_LIMIT_WINDOW_SECONDS` | `300` | window length |
-   | `TTS_DAILY_CAP` | `10000` | global ceiling per day (UTC) |
+   | `TTS_DAILY_CAP` | `10000` | global ceiling per UTC day |
 
-4. Deploy:
-
-   ```sh
-   wrangler deploy
-   ```
-
-## Operating
-
-- All decisions log nothing on the success path — the existing
-  `[tts] provider=... cache=...` log line is unchanged. Failures already
-  log `Kokoro TTS failed:`.
-- KV is only read/written for **synthesis** requests (text present). The
-  config probe (no text) is free.
-- When KV is not bound (local `vite dev`), the guard degrades to a no-op
-  for rate-limit but still enforces Origin — local abuse is not the
-  threat model.
-- Per-IP counter key: `tts:ip:<ip>:<windowIdx>`, TTL = `windowSeconds`.
-  Daily counter key: `tts:day:YYYY-MM-DD`, TTL = 36 h.
+4. Redeploy. The backend self-registers from `worker-env.ts` on cold
+   start. If Upstash is sick, the limiter **fails open** (returns allowed)
+   to avoid black-holing real users — the cache-proxy layer still bounds
+   abuse in that scenario.
 
 ## Verifying
 
 ```sh
 # Probe — always allowed from same origin:
-curl -sI https://verbs.example.com/api/tts
+curl -sI https://irregularverbsactive.vercel.app/api/tts
 
-# From a foreign origin — should degrade:
-curl -sI -H 'Origin: https://evil.example.com' https://verbs.example.com/api/tts
-
-# Synthesis attempt from foreign origin — should 403:
+# From a foreign origin — should degrade probe:
 curl -sI -H 'Origin: https://evil.example.com' \
-  'https://verbs.example.com/api/tts?text=hello&accent=british&speed=normal&type=sentence'
+  https://irregularverbsactive.vercel.app/api/tts
+# Expect: 200 with body {"configured":false,"provider":"none"}
 
-# Burst from same IP — after PER_IP requests should 429 with Retry-After:
+# Synthesis from foreign origin — should 403:
+curl -sI -H 'Origin: https://evil.example.com' \
+  'https://irregularverbsactive.vercel.app/api/tts?text=hello&accent=british&speed=normal&type=sentence'
+# Expect: 403
+
+# Burst from same IP (with Upstash bound) — eventually 429:
 for i in $(seq 1 70); do
   curl -s -o /dev/null -w '%{http_code}\n' \
-    "https://verbs.example.com/api/tts?text=test$i&accent=british&speed=normal&type=sentence"
+    "https://irregularverbsactive.vercel.app/api/tts?text=test$i&accent=british&speed=normal&type=sentence"
 done | sort | uniq -c
 ```
+
+## Server-side (Kokoro) layer
+
+For reference, the cache-proxy on the Kokoro box also has:
+
+- Per-IP rate-limit 30/min (env `RATE_LIMIT_PER_IP`, `RATE_LIMIT_WINDOW_S`)
+- systemd MemoryMax=512M, CPUQuota=80%, TasksMax=200
+- LRU cron eviction at 500 MB (`/usr/local/sbin/kokoro-cache-evict.sh`)
+- logrotate weekly × 4 for the synthesis log
+
+So even without Upstash, the Kokoro box itself caps abuse.

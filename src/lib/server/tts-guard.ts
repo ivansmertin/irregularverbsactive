@@ -1,44 +1,35 @@
-// Guardrails for the public /api/tts proxy:
-//   • Origin/Referer allowlist — blocks "borrowed" calls from other sites.
-//   • Sliding-window IP rate limiter backed by Cloudflare Workers KV.
-//   • Global daily ceiling so a single bad actor or runaway bug cannot
-//     drain the Kokoro budget while we sleep.
+// Guardrails for the public /api/tts proxy.
 //
-// All limits are tunable via env. When KV is not bound (e.g. local dev or
-// preview without the binding) the rate limiter degrades to a no-op so
-// the endpoint still works — local abuse is not the threat model.
+// Two layers, applied in order:
+//   1. Origin/Referer allowlist — blocks "borrowed" calls from other sites.
+//   2. Optional per-IP rate limiter — pluggable backend (see RateLimiter
+//      interface). Use Upstash Redis on Vercel, KV on Cloudflare Workers,
+//      or leave unset and rely on the upstream Kokoro cache-proxy's own
+//      per-IP rate-limit (30/min, set in /opt/kokoro-cache-proxy/main.py).
+//
+// All limits are tunable via env. When no rate-limit backend is registered
+// the limiter degrades to a no-op so the endpoint still works — local dev
+// abuse is not the threat model.
 //
 // Pure module: no React, no DOM. Safe to import from server handlers.
 
 export type Env = {
-  // Cloudflare Workers KV namespace. Bind via wrangler.jsonc.
-  TTS_RATE_LIMIT?: KVNamespace;
-  // Comma-separated list of allowed origins (e.g. "https://verbs.example.com,https://staging.example.com").
-  // Empty / unset → same-origin only (we still allow no-Origin GETs from
-  // direct navigation, which most browsers send for img/audio fetches).
+  // Comma-separated list of allowed origins
+  // (e.g. "https://verbs.example.com,https://staging.example.com").
+  // Empty / unset → same-origin only (derived from the request URL).
   ALLOWED_ORIGINS?: string;
-  // Per-IP requests per window. Default 60 per 5 min ≈ 12/min.
+  // Per-IP requests per window.
   TTS_RATE_LIMIT_PER_IP?: string;
   TTS_RATE_LIMIT_WINDOW_SECONDS?: string;
-  // Hard daily cap across all IPs. Default 10_000 calls/day.
+  // Hard daily ceiling across all IPs.
   TTS_DAILY_CAP?: string;
-};
-
-// Minimal KV typing — avoids depending on @cloudflare/workers-types in src.
-type KVNamespace = {
-  get(key: string, opts?: { type?: "text" | "json" }): Promise<string | null>;
-  put(key: string, value: string, opts?: { expirationTtl?: number }): Promise<void>;
 };
 
 export type GuardDecision =
   | { ok: true }
   | { ok: false; status: 403 | 429; message: string; retryAfter?: number };
 
-function intEnv(value: string | undefined, fallback: number): number {
-  if (!value) return fallback;
-  const n = Number.parseInt(value, 10);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
-}
+// ----- Origin check ------------------------------------------------------
 
 function parseAllowList(raw: string | undefined): string[] {
   if (!raw) return [];
@@ -74,7 +65,7 @@ function originAllowed(request: Request, env: Env): boolean {
   if (origin) {
     if (candidates.includes(origin)) return true;
     // Also accept a bare host match for cases where the Worker URL differs
-    // from the page URL (e.g. previews on *.workers.dev).
+    // from the page URL (e.g. previews on *.vercel.app, *.workers.dev).
     if (host && origin.endsWith(`//${host}`)) return true;
   }
 
@@ -91,9 +82,36 @@ function originAllowed(request: Request, env: Env): boolean {
   return false;
 }
 
+// ----- Rate-limit (pluggable backend) ------------------------------------
+
+/**
+ * Minimal interface a rate-limit backend must implement. Concrete
+ * implementations live next to the runtime they target:
+ *
+ *   - Cloudflare Workers: a KV-backed sliding window
+ *   - Vercel: an Upstash Redis-backed window (when configured)
+ *   - else: noop (recommended only when the upstream service has its own
+ *     per-IP rate-limit, as Kokoro cache-proxy does in our setup).
+ */
+export interface RateLimiter {
+  /** Returns `{ allowed, retryAfter? }`. */
+  consume(opts: {
+    ip: string;
+    perIpLimit: number;
+    windowSeconds: number;
+    dailyCap: number;
+  }): Promise<{ allowed: true } | { allowed: false; retryAfter: number; reason: "ip" | "daily" }>;
+}
+
+let backend: RateLimiter | null = null;
+
+/** Register a rate-limit backend. Call this at server entry-point setup. */
+export function setRateLimiter(rl: RateLimiter | null): void {
+  backend = rl;
+}
+
 function clientIp(request: Request): string {
-  // Cloudflare always sets CF-Connecting-IP for real client traffic.
-  // Fallback chain mirrors common reverse-proxy headers for local/dev.
+  // Vercel sets x-forwarded-for and x-real-ip. Cloudflare adds cf-connecting-ip.
   return (
     request.headers.get("cf-connecting-ip") ||
     request.headers.get("x-real-ip") ||
@@ -102,34 +120,13 @@ function clientIp(request: Request): string {
   );
 }
 
-/**
- * Read the current counter for a key, return [count, ttl].
- * KV `get` returns null for missing keys; we treat missing as 0.
- */
-async function readCounter(kv: KVNamespace, key: string): Promise<number> {
-  const raw = await kv.get(key);
-  if (!raw) return 0;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+function intEnv(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-/**
- * Bump a KV counter with a TTL. Not strictly atomic (KV doesn't support
- * INCR), so under burst contention a small overcount is possible — that's
- * acceptable for an abuse cap. We pass the window TTL on every write so
- * the key always expires roughly `windowSeconds` after the LAST write,
- * which is the desired sliding-window-ish behaviour.
- */
-async function bumpCounter(kv: KVNamespace, key: string, windowSeconds: number): Promise<number> {
-  const current = await readCounter(kv, key);
-  const next = current + 1;
-  await kv.put(key, String(next), { expirationTtl: windowSeconds });
-  return next;
-}
-
-function dayKey(): string {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
-}
+// ----- Public API --------------------------------------------------------
 
 /**
  * Apply Origin + rate-limit guards. Call this BEFORE doing any expensive
@@ -145,10 +142,8 @@ export async function applyTtsGuards(request: Request, env: Env): Promise<GuardD
     };
   }
 
-  // Without KV bound (local dev, missing binding), we cannot rate-limit.
-  // Allow the request and log once so the operator notices.
-  const kv = env.TTS_RATE_LIMIT;
-  if (!kv) {
+  if (!backend) {
+    // No backend bound — rely on upstream (Kokoro cache-proxy) limits.
     return { ok: true };
   }
 
@@ -157,41 +152,15 @@ export async function applyTtsGuards(request: Request, env: Env): Promise<GuardD
   const windowSeconds = intEnv(env.TTS_RATE_LIMIT_WINDOW_SECONDS, 300);
   const dailyCap = intEnv(env.TTS_DAILY_CAP, 10_000);
 
-  const ipKey = `tts:ip:${ip}:${Math.floor(Date.now() / 1000 / windowSeconds)}`;
-  const dayKeyName = `tts:day:${dayKey()}`;
-
-  // Read both counters in parallel — we still write sequentially below
-  // to keep the call simple.
-  const [ipCount, dayCount] = await Promise.all([
-    readCounter(kv, ipKey),
-    readCounter(kv, dayKeyName),
-  ]);
-
-  if (dayCount >= dailyCap) {
-    return {
-      ok: false,
-      status: 429,
-      message: "Daily TTS quota exhausted. Please try tomorrow.",
-      retryAfter: 3600,
-    };
-  }
-
-  if (ipCount >= perIpLimit) {
-    return {
-      ok: false,
-      status: 429,
-      message: "Too many TTS requests from your IP. Please slow down.",
-      retryAfter: windowSeconds,
-    };
-  }
-
-  // Bump both counters AFTER deciding to allow — keeps the limit close to
-  // its nominal value at the cost of one extra KV write per pass.
-  await Promise.all([
-    bumpCounter(kv, ipKey, windowSeconds),
-    // Day key TTL of 36h gives a comfortable cushion for the UTC rollover.
-    bumpCounter(kv, dayKeyName, 36 * 3600),
-  ]);
-
-  return { ok: true };
+  const result = await backend.consume({ ip, perIpLimit, windowSeconds, dailyCap });
+  if (result.allowed) return { ok: true };
+  return {
+    ok: false,
+    status: 429,
+    message:
+      result.reason === "daily"
+        ? "Daily TTS quota exhausted. Please try tomorrow."
+        : "Too many TTS requests from your IP. Please slow down.",
+    retryAfter: result.retryAfter,
+  };
 }

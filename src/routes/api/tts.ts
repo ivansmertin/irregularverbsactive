@@ -159,7 +159,13 @@ function configured(): boolean {
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // JSON responses (probe + errors) must never be cached at shared
+      // caches — they encode per-origin guard decisions.
+      "Cache-Control": "private, no-store",
+      Vary: "Origin",
+    },
   });
 }
 
@@ -422,8 +428,16 @@ export const Route = createFileRoute("/api/tts")({
           status: 200,
           headers: {
             "Content-Type": result.contentType,
-            // Enable long-term Cloudflare edge and browser caching for GET requests
-            "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
+            // private (not public): browsers cache for a year, but Vercel
+            // edge / shared CDNs MUST NOT cache the response — that would
+            // bypass our Origin guard on subsequent requests for the same
+            // URL. The upstream Kokoro cache-proxy already deduplicates
+            // on the server, so we don't lose performance.
+            "Cache-Control": "private, max-age=31536000, immutable",
+            // Belt-and-suspenders: if any intermediate cache ignores the
+            // private directive (some misbehave), key the entry on Origin
+            // so cross-origin replays still miss.
+            Vary: "Origin",
             "X-TTS-Provider": "kokoro",
             "X-TTS-Voice": voice,
             "X-TTS-Cache": cacheStatus,
