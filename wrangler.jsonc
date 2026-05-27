@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tanstack-start-app",
+  "compatibility_date": "2025-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "src/server.ts",
+
+  // -------- TTS guardrails --------
+  // ALLOWED_ORIGINS: comma-separated list of front-end origins permitted
+  // to call /api/tts. Same-origin is always allowed. Set this to your
+  // production domain(s) before deploying.
+  //
+  // TTS_RATE_LIMIT_PER_IP / TTS_RATE_LIMIT_WINDOW_SECONDS: sliding-window
+  // per-IP cap. 60 calls per 5 min ≈ 12/min — covers a heavy practice
+  // session but stops a script.
+  //
+  // TTS_DAILY_CAP: hard global ceiling. Set to roughly your Kokoro
+  // daily budget converted to requests.
+  "vars": {
+    "ALLOWED_ORIGINS": "",
+    "TTS_RATE_LIMIT_PER_IP": "60",
+    "TTS_RATE_LIMIT_WINDOW_SECONDS": "300",
+    "TTS_DAILY_CAP": "10000"
+  },
+
+  // KV namespace for the rate limiter. Create with:
+  //   wrangler kv namespace create TTS_RATE_LIMIT
+  //   wrangler kv namespace create TTS_RATE_LIMIT --preview
+  // Then paste the returned ids below.
+  "kv_namespaces": [
+    {
+      "binding": "TTS_RATE_LIMIT",
+      "id": "REPLACE_WITH_KV_ID",
+      "preview_id": "REPLACE_WITH_PREVIEW_KV_ID"
+    }
+  ]
+}
